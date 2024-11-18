@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 
 from libs.model import RecommenderModel
@@ -38,8 +40,11 @@ class MostBoughtGameModel(RecommenderModel):
         return scores.mean()
 
     def save(self, path: str):
-        pass
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
 
     @classmethod
     def load(cls, path: str):
-        super().load(path)
+        with open(path, 'rb') as f:
+            obj = pickle.load(f)
+        return obj
