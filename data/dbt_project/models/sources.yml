@@ -1,0 +1,16 @@
+version: 2
+sources:
+  - name: preprocessed
+    tables:
+      - name: preprocessed_reviews
+        config:
+          external_location: '../preprocessed/reviews.parquet'
+          format: parquet
+      - name: preprocessed_users
+        config:
+          external_location: '../preprocessed/users.parquet'
+          format: parquet
+      - name: preprocessed_games
+        config:
+          external_location: '../preprocessed/games.parquet'
+          format: parquet

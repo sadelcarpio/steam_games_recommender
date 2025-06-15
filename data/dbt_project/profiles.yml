@@ -1,0 +1,8 @@
+steam_recsys_dw:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: steam.duckdb
+      extensions:
+        - parquet
