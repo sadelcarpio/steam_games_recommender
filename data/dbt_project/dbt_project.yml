@@ -1,0 +1,5 @@
+name: 'steam_recsys_dw'
+version: '1.0'
+profile: 'steam_recsys_dw'
+
+model-paths: ['models']
