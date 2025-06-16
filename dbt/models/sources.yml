@@ -1,16 +1,16 @@
 version: 2
 sources:
-  - name: preprocessed
+  - name: raw
     tables:
-      - name: preprocessed_reviews
+      - name: raw_reviews
         config:
-          external_location: '../data/preprocessed/reviews.parquet'
+          external_location: '../data/raw/reviews/steam_reviews_*.parquet'
           format: parquet
-      - name: preprocessed_users
+      - name: raw_games
         config:
-          external_location: '../data/preprocessed/users.parquet'
+          external_location: '../data/raw/games/steam_games_full.parquet'
           format: parquet
-      - name: preprocessed_games
+      - name: categories
         config:
-          external_location: '../data/preprocessed/games.parquet'
+          external_location: '../data/raw/categories.parquet'
           format: parquet
