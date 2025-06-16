@@ -21,3 +21,4 @@ test.env
 .user.yml
 # db
 *.duckdb
+.idea/

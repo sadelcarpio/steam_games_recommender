@@ -4,13 +4,13 @@ sources:
     tables:
       - name: preprocessed_reviews
         config:
-          external_location: '../preprocessed/reviews.parquet'
+          external_location: '../data/preprocessed/reviews.parquet'
           format: parquet
       - name: preprocessed_users
         config:
-          external_location: '../preprocessed/users.parquet'
+          external_location: '../data/preprocessed/users.parquet'
           format: parquet
       - name: preprocessed_games
         config:
-          external_location: '../preprocessed/games.parquet'
+          external_location: '../data/preprocessed/games.parquet'
           format: parquet

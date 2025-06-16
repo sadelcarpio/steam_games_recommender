@@ -1,0 +1,6 @@
+project: steam_recsys
+registry: data/registry.db
+provider: local
+offline_store:
+  type: duckdb
+entity_key_serialization_version: 3

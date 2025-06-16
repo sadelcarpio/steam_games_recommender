@@ -1,16 +1,17 @@
 -- models/reviews.sql
-{{ config(materialized='view') }}
+{{ config(materialized='table') }}
 
 SELECT
     rec_id,
-    author_id AS user_id,
-    appid AS game_id,
+    user_id,
+    game_id,
     playtime_forever,
     playtime_last_two_weeks,
     playtime_at_review,
     last_played,
     review,
     timestamp_created,
+    votes_up,
     voted_up,
     votes_funny,
     weighted_vote_score,
