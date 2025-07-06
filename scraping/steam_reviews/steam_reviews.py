@@ -73,7 +73,6 @@ reviews = pl.DataFrame(
 
 batch = 0
 processed = 0
-game_extra_features = []
 for item, game in enumerate(recommended_games.iter_rows(named=True)):
     cursor = "*"
     user_reviews = []
@@ -94,14 +93,6 @@ for item, game in enumerate(recommended_games.iter_rows(named=True)):
         )
     print(data["query_summary"])
     if data["query_summary"].get("total_reviews"):
-        game_extra_features.append({
-            "appid": appid,
-            "review_score": data["query_summary"]["review_score"],
-            "review_score_desc": data["query_summary"]["review_score_desc"],
-            "total_positive_reviews": data["query_summary"]["total_positive"],
-            "total_negative_reviews": data["query_summary"]["total_negative"],
-            "total_reviews": data["query_summary"]["total_reviews"],
-        })
         total_reviews = data["query_summary"]["total_reviews"]
         total_iter = total_reviews // 100 + (1 if total_reviews % 100 > 0 else 0)
         cursor = data["cursor"]
@@ -150,13 +141,3 @@ for item, game in enumerate(recommended_games.iter_rows(named=True)):
         batch += 1
 
 reviews.write_parquet(f"../../../data/steam_reviews_{batch}.parquet")
-game_extra_features_df = pl.DataFrame(game_extra_features, infer_schema_length=None,
-                                      schema={
-                                          'appid': pl.Int64,
-                                          'review_score': pl.Int64,
-                                          'review_score_desc': pl.String,
-                                          'total_positive_reviews': pl.Int64,
-                                          'total_negative_reviews': pl.Int64,
-                                          'total_reviews': pl.Int64
-                                      })
-game_extra_features_df.write_parquet(f"../../../data/steam_games_extra_features.parquet")

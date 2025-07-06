@@ -9,7 +9,7 @@ def download_all_steam_games():
     df = polars.DataFrame(data)
     df = df.unique(subset=["appid", "name"])
     df = df.replace_column(1, df["name"].str.strip_chars())
-    df.write_csv("../data/steam_games.csv")
+    df.write_csv("../data/steam_games.parquet")
     return response.json()
 
 

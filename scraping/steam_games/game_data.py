@@ -11,8 +11,15 @@ def get_app_data(url: str, appid: str):
     return response.json()
 
 
+def get_app_reviews(url: str, appid: str, filt: str, cursor: str = "*"):
+    response = requests.get(f"{url}/{appid}",
+                            params={"json": "1", "filter": filt, "cursor": cursor, "num_per_page": "100"})
+    response.raise_for_status()
+    return response.json()
+
+
 if __name__ == "__main__":
-    df = pl.read_csv("../../../data/steam_games.csv")
+    df = pl.read_csv("../../data/raw/games/steam_games.csv")
     apps_features_df = pl.DataFrame(
         schema={
             "appid": pl.Int64,
@@ -31,29 +38,37 @@ if __name__ == "__main__":
             "developers": pl.List(pl.String),
             "publishers": pl.List(pl.String),
             "price": pl.Float64,
-            "category_ids": pl.List(pl.Int64),
-            "genres_list": pl.List(pl.String),
+            "categories": pl.List(pl.String),
+            "genres": pl.List(pl.String),
             "windows_support": pl.Boolean,
             "mac_support": pl.Boolean,
             "linux_support": pl.Boolean,
             "release_date": pl.String,
             "coming_soon": pl.Boolean,
             "recommendations": pl.Int64,
-            "dlc": pl.List(pl.Int64)
+            "dlc": pl.List(pl.Int64),
+            "review_score": pl.Int64,
+            "review_score_desc": pl.String,
+            "total_positive_reviews": pl.Int64,
+            "total_negative_reviews": pl.Int64,
+            "total_reviews": pl.Int64
         }
     )
     try:
         for i, row in enumerate(df.iter_rows()):
-            if i <= 183300:
-                continue
             appid = row[0]
-            try:
-                time.sleep(1.6)
-                data = get_app_data("https://store.steampowered.com/api/appdetails", appid)
-            except Exception:
-                print(f"Quota limit reached for executor. {appid}. Left in row {i}")
-                break
-            if data and data.get(str(appid)).get("success"):
+            for tries in range(10):
+                try:
+                    time.sleep(1.6)
+                    data = get_app_data("https://store.steampowered.com/api/appdetails", appid)
+                    game_reviews_data = get_app_reviews("https://store.steampowered.com/appreviews", appid=appid, filt="recent")
+                except Exception:
+                    print(f"Quota limit reached for executor. {appid}. Left in row {i}")
+                    time.sleep(10)
+                else:
+                    break
+
+            if data and data.get(str(appid)).get("success") and game_reviews_data.get("reviews") is not None:
                 app_info = data[str(appid)]["data"]
                 if app_info["short_description"] == '' or not app_info.get("supported_languages") or not \
                         app_info["pc_requirements"] or not app_info.get("genres") or not app_info.get("categories"):
@@ -104,15 +119,20 @@ if __name__ == "__main__":
                     "developers": app_info.get("developers", []),
                     "publishers": app_info.get("publishers", []),
                     "price": price,
-                    "category_ids": [v["id"] for v in app_info["categories"]],
-                    "genres_list": [v["description"] for v in app_info["genres"]],
+                    "categories": [v["description"] for v in app_info["categories"]],
+                    "genres": [v["description"] for v in app_info["genres"]],
                     "windows_support": app_info["platforms"]["windows"],
                     "mac_support": app_info["platforms"]["mac"],
                     "linux_support": app_info["platforms"]["linux"],
                     "release_date": app_info["release_date"]["date"],
                     "coming_soon": app_info["release_date"]["coming_soon"],
                     "recommendations": recommendations,
-                    "dlc": app_info.get("dlc", [])
+                    "dlc": app_info.get("dlc", []),
+                    "review_score": game_reviews_data["query_summary"]["review_score"],
+                    "review_score_desc": game_reviews_data["query_summary"]["review_score_desc"],
+                    "total_positive_reviews": game_reviews_data["query_summary"]["total_positive"],
+                    "total_negative_reviews": game_reviews_data["query_summary"]["total_negative"],
+                    "total_reviews": game_reviews_data["query_summary"]["total_reviews"]
                 }
 
                 print(f"Finished processing element #{appid} in iteration #{i}")
@@ -125,4 +145,4 @@ if __name__ == "__main__":
         print(e)
 
     print(apps_features_df)
-    apps_features_df.write_parquet("../../../data/steam_games_features_11.parquet")
+    apps_features_df.write_parquet("../../data/steam_games_full.parquet")

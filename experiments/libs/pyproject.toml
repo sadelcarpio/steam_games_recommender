@@ -1,7 +1,0 @@
-[project]
-name = "libs"
-version = "0.1.0"
-description = "Common functionality for all recommender models"
-readme = "README.md"
-requires-python = ">=3.10"
-dependencies = []
