@@ -3,21 +3,21 @@
 
 WITH reviews AS (
     SELECT *
-    FROM {{ ref('int_deduplicated_reviews') }}  -- This is your deduplicated_reviews model
+    FROM {{ ref('int_deduplicated_reviews') }}
 ),
 
 user_counts AS (
     SELECT user_id
     FROM reviews
     GROUP BY user_id
-    HAVING COUNT(*) >= 10  -- equal or more than 10 reviews
+    HAVING COUNT(*) >= 5  -- equal or more than 10 reviews
 ),
 
 game_counts AS (
     SELECT game_id
     FROM reviews
     GROUP BY game_id
-    HAVING COUNT(*) >= 10
+    HAVING COUNT(*) >= 5
 ),
 
 filtered_reviews AS (

@@ -1,16 +1,13 @@
+
 version: 2
 sources:
   - name: raw
     tables:
       - name: raw_reviews
         config:
-          external_location: '../data/raw/reviews/steam_reviews_*.parquet'
+          external_location: "{{ env_var('RAW_REVIEWS_LOCATION', '../data/raw/reviews/steam_reviews_*.parquet') }}"
           format: parquet
       - name: raw_games
         config:
-          external_location: '../data/raw/games/steam_games_full.parquet'
-          format: parquet
-      - name: categories
-        config:
-          external_location: '../data/raw/categories.parquet'
+          external_location: "{{ env_var('RAW_GAMES_LOCATION', '../data/raw/games/steam_games.parquet') }}"
           format: parquet
