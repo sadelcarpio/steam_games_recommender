@@ -1,5 +1,5 @@
 -- models/staging/stg_games.sql
-{{ config(materialized='table') }}
+{{ config(materialized='view') }}
 
 WITH filtered AS (SELECT *
                   FROM {{ source('raw', 'raw_games') }}

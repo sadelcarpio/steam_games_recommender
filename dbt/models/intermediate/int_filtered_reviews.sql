@@ -1,5 +1,5 @@
 -- models/intermediate/filtered_reviews.sql
-{{ config(materialized='table') }}
+{{ config(materialized='view') }}
 
 WITH reviews AS (
     SELECT *

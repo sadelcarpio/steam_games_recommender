@@ -1,5 +1,5 @@
 -- models/intermediate/int_deduplicated_games.sql
-{{ config(materialized='table') }}
+{{ config(materialized='view') }}
 
 SELECT *
 FROM {{ ref('stg_games') }} QUALIFY ROW_NUMBER() OVER (

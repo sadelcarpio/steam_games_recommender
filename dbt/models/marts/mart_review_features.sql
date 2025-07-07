@@ -13,7 +13,7 @@ SELECT u.user_index,
        r.weighted_vote_score,
        r.timestamp_created
 FROM {{ ref('int_filtered_reviews') }} r
-JOIN {{ ref('mart_game_features_with_index') }} g
+JOIN {{ ref('mart_game_features_with_ids') }} g
 ON r.game_id = g.game_id
 JOIN {{ ref('mart_user_id_mapping') }} u
 ON r.user_id = u.user_id

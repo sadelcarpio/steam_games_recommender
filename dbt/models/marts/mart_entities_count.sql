@@ -14,7 +14,7 @@ SELECT
     'games',
     COUNT(*),
     CURRENT_TIMESTAMP
-FROM {{ ref('mart_game_features') }}
+FROM {{ ref('mart_game_features_with_ids') }}
 UNION ALL
 SELECT
     'reviews',
