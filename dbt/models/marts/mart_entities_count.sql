@@ -1,8 +1,6 @@
 -- models/marts/mart_entities_count.sql
 {{ config(
-    materialized='external',
-    location='../data/marts/count.csv',
-    format='csv'
+    materialized='table'
 ) }}
 SELECT
     'users' AS model,
@@ -11,10 +9,16 @@ SELECT
 FROM {{ ref('mart_user_features') }}
 UNION ALL
 SELECT
-    'games',
+    'games_features',
     COUNT(*),
     CURRENT_TIMESTAMP
 FROM {{ ref('mart_game_features_with_ids') }}
+UNION ALL
+SELECT
+    'games',
+    COUNT(*),
+    CURRENT_TIMESTAMP
+FROM {{ ref('mart_game_id_mapping') }}
 UNION ALL
 SELECT
     'reviews',
