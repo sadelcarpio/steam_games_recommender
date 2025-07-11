@@ -1,3 +1,7 @@
+-- models/marts/dimensions/dim_games_imputed.sql
+{{ config(
+    materialized='table'
+) }}
 WITH games_imputed AS (SELECT g.game_id,
                               g.game_name,
                               g.game_developers,

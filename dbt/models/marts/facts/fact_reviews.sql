@@ -1,4 +1,4 @@
--- models/marts/fact_reviews.sql
+-- models/marts/facts/fact_reviews.sql
 {#{{ config(#}
 {#    materialized='external',#}
 {#    location='../data/marts/review_features.parquet',#}

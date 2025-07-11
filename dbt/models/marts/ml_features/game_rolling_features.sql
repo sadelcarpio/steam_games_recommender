@@ -1,6 +1,6 @@
--- models/marts/mart_game_features.sql
+-- models/marts/ml_features/mart_game_features.sql
 {{ config(
-    materialized='view'
+    materialized='table'
 ) }}
 WITH cumulative AS (
     SELECT
