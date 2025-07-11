@@ -6,7 +6,7 @@ SELECT
     'users' AS model,
     COUNT(DISTINCT user_id) AS row_count,
     CURRENT_TIMESTAMP AS snapshot_time
-FROM {{ ref('mart_user_features') }}
+FROM {{ ref('mart_user_id_mapping') }}
 UNION ALL
 SELECT
     'games_features',
