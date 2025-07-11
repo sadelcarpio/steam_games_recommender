@@ -6,22 +6,22 @@ SELECT
     'users' AS model,
     COUNT(DISTINCT user_id) AS row_count,
     CURRENT_TIMESTAMP AS snapshot_time
-FROM {{ ref('mart_user_id_mapping') }}
+FROM {{ ref('user_id_mapping') }}
 UNION ALL
 SELECT
     'games_features',
     COUNT(*),
     CURRENT_TIMESTAMP
-FROM {{ ref('mart_game_features_with_ids') }}
+FROM {{ ref('game_rolling_features') }}
 UNION ALL
 SELECT
     'games',
     COUNT(*),
     CURRENT_TIMESTAMP
-FROM {{ ref('mart_game_id_mapping') }}
+FROM {{ ref('dim_games_imputed') }}
 UNION ALL
 SELECT
     'reviews',
     COUNT(*),
     CURRENT_TIMESTAMP
-FROM {{ ref('mart_review_features') }}
+FROM {{ ref('fact_reviews') }}

@@ -1,4 +1,4 @@
--- models/marts/mart_reviews_features.sql
+-- models/marts/fact_reviews.sql
 {#{{ config(#}
 {#    materialized='external',#}
 {#    location='../data/marts/review_features.parquet',#}
@@ -9,11 +9,12 @@ SELECT u.user_index,
        g.game_index,
        r.review,
        r.voted_up,
+       r.weighted_vote_score,
        r.votes_up,
        r.comment_count,
        r.timestamp_created
-FROM {{ ref('int_filtered_reviews') }} r
-JOIN {{ ref('mart_game_id_mapping') }} g
+FROM {{ ref('int_deduplicated_reviews') }} r
+JOIN {{ ref('dim_games_imputed') }} g
 ON r.game_id = g.game_id
-JOIN {{ ref('mart_user_id_mapping') }} u
+JOIN {{ ref('user_id_mapping') }} u
 ON r.user_id = u.user_id
