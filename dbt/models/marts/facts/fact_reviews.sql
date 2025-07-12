@@ -8,6 +8,7 @@
 SELECT u.user_index,
        g.game_index,
        r.review,
+       r.written_during_early_access,
        r.voted_up,
        r.weighted_vote_score,
        r.votes_up,

@@ -6,6 +6,7 @@ SELECT rec_id                          AS review_id,
        appid                           AS game_id,
        review,
        TO_TIMESTAMP(timestamp_created) AS timestamp_created,
+       written_during_early_access,
        voted_up,  -- calculate overall game score
        weighted_vote_score,  -- gives the importance of review, calculate overall game score
        votes_up,  -- gives the importance of review
