@@ -4,7 +4,7 @@
 WITH filtered AS (SELECT *
                   FROM {{ source('raw', 'raw_games') }}
                   WHERE type = 'game'
-                    AND coming_soon = false)
+                    AND coming_soon = FALSE)
 SELECT appid                  AS game_id,
        name                   AS game_name,
        developers             AS game_developers, -- list
