@@ -22,5 +22,5 @@ WITH games_imputed AS (SELECT g.game_id,
                                            GROUP BY game_id) first_review
                                           USING (game_id))
 SELECT *,
-       ROW_NUMBER() OVER (ORDER BY release_date NULLS LAST) - 1 AS game_index
+       ROW_NUMBER() OVER (ORDER BY game_release_date NULLS LAST) - 1 AS game_index
 FROM games_imputed
