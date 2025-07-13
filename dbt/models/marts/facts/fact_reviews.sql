@@ -17,5 +17,5 @@ SELECT u.user_index,
 FROM {{ ref('int_deduplicated_reviews') }} r
 JOIN {{ ref('dim_games_imputed') }} g
 ON r.game_id = g.game_id
-JOIN {{ ref('user_id_mapping') }} u
+JOIN {{ ref('dim_users') }} u
 ON r.user_id = u.user_id
