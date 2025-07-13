@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: fact_reviews
+    description: Source of truth for review data.
+    columns:
+      - name: user_index
+        description: Incremental index assigned to each user in order of appearance
+      - name: game_index
+        description: Incremental index assigned to each game in order of appearance
+      - name: review_id
+        description: Unique identifier of review
+      - name: review
+        description: Review text
+      - name: written_during_early_access
+        description: Whether review was written during game early access period
+      - name: voted_up
+        description: Whether review is positive (1) or negative (0)
+      - name: weighted_vote_score
+        description: Importance of review
+      - name: votes_up
+        description: How many votes up did the review have
+      - name: comment_count
+        description: Number of comments the review had
+      - name: timestamp_created
+        description: Creation timestamp of review on UTC

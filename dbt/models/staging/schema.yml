@@ -14,6 +14,8 @@ models:
         description: List of publishers for the game. Might be different from developers
       - name: game_genres
         description: List of genres of the game
+      - name: game_categories
+        description: List of game categories (generally, features compatible with the game)
       - name: game_release_date
         description: Release date of the game, correctly parsed. May still be null
       - name: game_short_description
@@ -54,7 +56,7 @@ models:
         description: Review text
       - name: timestamp_created
         description: Creation timestamp of review on UTC
-      - name: written_dury_early_access
+      - name: written_during_early_access
         description: Whether review was written during game early access period
       - name: voted_up
         description: Whether review is positive (1) or negative (0)

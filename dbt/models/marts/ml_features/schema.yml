@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: game_rolling_features
+    description: Games data with rolling scores calculated on a day to day basis
+    columns:
+      - name: game_index
+        description: Incremental index assigned to each game in order of appearance (see `game_prerelease_date`)
+      - name: game_id
+        description: Unique ID assigned to each game in Steam.
+      - name: game_name
+        description: Name of the Steam game
+      - name: game_developers
+        description: List of developers of the game
+      - name: game_publishers
+        description: List of publishers for the game. Might be different from developers
+      - name: game_genres
+        description: List of genres of the game
+      - name: game_categories
+        description: List of game categories (generally, features compatible with the game)
+      - name: game_steam_release_date
+        description: Release date of the game, as listed in Steam. Can be null
+      - name: game_release_date
+        description: Release date of the game, if null replaced by first review timestamp of the game.
+      - name: game_prerelease_date
+        description: > 
+          Source for the first reference of the game on Steam. It's either the first review timestamp (early access) 
+          or the `game_release_date`, whichever comes first
+      - name: game_short_description
+        description: Short description of the game
+      - name: game_review_score
+        description: General review score of a game, based on positive / negative reviews. Ranging from 0 to 10
+      - name: game_review_score_description
+        description: >
+          Text representing the score description.
+          0 -> Less than 10 reviews
+          1 -> Overwhelmingly Negative
+          2 -> Very Negative
+          3 -> Negative
+          4 -> Negative
+          5 -> Mostly Negative
+          6 -> Mixed
+          7 -> Mostly Positive
+          8 -> Positive
+          9 -> Very Positive
+          10 -> Overwhelmingly Positive
+      - name: game_total_reviews
+        description: All-time total reviews from Steam
+      - name: game_total_positive_reviews
+        description: All-time total positive reviews
+      - name: game_total_negative_reviews
+        description: All-time total negative reviews
+      - name: game_review_day
+        description: Cutoff day for score computation
+      - name: game_num_reviews
+        description: Number of reviews up to `game_review_day`
+      - name: game_num_positive_reviews
+        description: Number of positive reviews up to `game_review_day`
+      - name: game_num_negative_reviews
+        description: Number of negative reviews up to `game_review_day`
+      - name: game_weighted_score
+        description: Weighted score of the game calculated up to `game_review_day`
