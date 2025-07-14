@@ -28,13 +28,13 @@ daily_users AS (
     GROUP BY 1
 ),
 cumulative_users AS (
-            SELECT
-                review_day,
-                SUM(new_users) OVER (
-                    ORDER BY review_day
-                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                ) AS cumulative_users_count
-            FROM daily_users
+    SELECT
+        review_day,
+        SUM(new_users) OVER (
+            ORDER BY review_day
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS cumulative_users_count
+    FROM daily_users
 ),
 daily_games AS (
     SELECT
