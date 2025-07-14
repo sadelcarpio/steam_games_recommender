@@ -50,4 +50,4 @@ SELECT
     a.num_positive_reviews AS game_num_positive_reviews,
     a.num_negative_reviews AS game_num_negative_reviews,
     a.weighted_score AS game_weighted_score
-FROM aggregated a JOIN {{ ref('dim_games_imputed') }} g USING (game_index)
+FROM aggregated a JOIN {{ ref('dim_games') }} g USING (game_index)

@@ -15,7 +15,7 @@ SELECT u.user_index,
        r.comment_count,
        r.timestamp_created
 FROM {{ ref('int_deduplicated_reviews') }} r
-JOIN {{ ref('dim_games_imputed') }} g
+JOIN {{ ref('dim_games') }} g
 ON r.game_id = g.game_id
 JOIN {{ ref('dim_users') }} u
 ON r.user_id = u.user_id

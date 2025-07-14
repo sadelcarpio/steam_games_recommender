@@ -7,6 +7,7 @@ WITH filtered AS (SELECT *
                     AND coming_soon = FALSE)
 SELECT appid                  AS game_id,
        name                   AS game_name,
+       is_free                AS game_is_free,
        developers             AS game_developers, -- list
        publishers             AS game_publishers, -- list
        categories             AS game_categories, -- list

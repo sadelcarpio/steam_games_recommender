@@ -1,13 +1,15 @@
 version: 2
 
 models:
-  - name: dim_games_imputed
+  - name: dim_games
     description: Source of truth for games data, with imputed values on the release date for consistency with review dates.
     columns:
       - name: game_index
         description: Incremental index assigned to each game in order of appearance (see `game_prerelease_date`)
       - name: game_id
         description: Unique ID assigned to each game in Steam.
+      - name: game_is_free
+        description: Whether the game is free to play or not
       - name: game_name
         description: Name of the Steam game
       - name: game_developers

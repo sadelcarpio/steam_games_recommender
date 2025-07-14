@@ -8,6 +8,8 @@ models:
         description: Incremental index assigned to each game in order of appearance (see `game_prerelease_date`)
       - name: game_id
         description: Unique ID assigned to each game in Steam.
+      - name: game_is_free
+        description: Whether the game is free to play or not
       - name: game_name
         description: Name of the Steam game
       - name: game_developers
