@@ -6,9 +6,13 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "duckdb>=1.3.2",
+    "fbgemm-gpu>=1.2.0",
     "jupyter>=1.1.1",
     "matplotlib>=3.9.2",
     "notebook>=7.0.7",
     "polars[pyarrow]>=1.30.0",
     "seaborn>=0.13.2",
+    "torch>=2.7.1",
+    "torchmetrics>=1.7.4",
+    "torchrec>=0.4.0",
 ]
