@@ -2,12 +2,17 @@ version: 2
 
 models:
   - name: int_deduplicated_games
-    description: Deduplicates games based on game name keeping the ones with higher score.
+    description: Deduplicates games based on game_name and game_id keeping the ones with higher score.
     columns:
       - name: game_id
         description: Unique ID assigned to each game in Steam.
+        tests:
+          - not_null
+          - unique
       - name: game_name
         description: Name of the Steam game
+        tests:
+          - not_null
       - name: game_is_free
         description: Whether the game is free to play or not
       - name: game_developers
@@ -45,15 +50,27 @@ models:
       - name: game_total_negative_reviews
         description: All-time total negative reviews
 
-  - name: int_deduplicated_reviews
-    description: Deduplicates review data by user_id, game_id combination
+  - name: int_canonical_game_ids
+    description: Mapping from games with different game ids but same name. Some reviews reference multiple game ids for a single game
+    columns:
+      - name: original_game_id
+        description: Game id before deduplication
+      - name: canonical_game_id
+        description: Game id after deduplication
+
+  - name: int_reviews_with_canonical_id
+    description: Review data after mapping the original game ids to a single, canonical id
     columns:
       - name: review_id
-        description: Unique identifier of review
+        description: Identifier of review
       - name: user_id
         description: Anonymized user id of the reviewer
       - name: game_id
-        description: Steam Game id
+        description: Steam Game id. Refers to a single game
+        tests:
+          - relationships:
+              to: ref('int_deduplicated_games')
+              field: game_id
       - name: review
         description: Review text
       - name: timestamp_created
@@ -68,3 +85,46 @@ models:
         description: How many votes up did the review have
       - name: comment_count
         description: Number of comments the review had
+
+  - name: int_deduplicated_reviews
+    description: Deduplicates review data by review_id
+    columns:
+      - name: review_id
+        description: Unique identifier of review
+        tests:
+          - not_null
+          - unique
+      - name: user_id
+        description: Anonymized user id of the reviewer
+        tests:
+          - not_null
+      - name: game_id
+        description: Steam Game id
+        tests:
+          - not_null
+      - name: review
+        description: Review text
+      - name: timestamp_created
+        description: Creation timestamp of review on UTC
+        tests:
+          - not_null
+      - name: written_during_early_access
+        description: Whether review was written during game early access period
+        tests:
+          - not_null
+      - name: voted_up
+        description: Whether review is positive (1) or negative (0)
+        tests:
+          - not_null
+      - name: weighted_vote_score
+        description: Importance of review
+        tests:
+          - not_null
+      - name: votes_up
+        description: How many votes up did the review have
+        tests:
+          - not_null
+      - name: comment_count
+        description: Number of comments the review had
+        tests:
+          - not_null

@@ -62,11 +62,11 @@ all_days AS (
 )
 SELECT
     d.review_day,
-    LAST_VALUE(r.cumulative_reviews_count IGNORE NULLS) OVER (ORDER BY d.review_day
+    MAX(r.cumulative_reviews_count) OVER (ORDER BY d.review_day
         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_review_count,
-    LAST_VALUE(u.cumulative_users_count IGNORE NULLS) OVER (ORDER BY d.review_day
+    MAX(u.cumulative_users_count) OVER (ORDER BY d.review_day
         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_user_count,
-    LAST_VALUE(g.cumulative_games_count IGNORE NULLS) OVER (ORDER BY d.review_day
+    MAX(g.cumulative_games_count) OVER (ORDER BY d.review_day
         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_game_count
 FROM all_days d
 LEFT JOIN cumulative_reviews r ON d.review_day = r.review_day

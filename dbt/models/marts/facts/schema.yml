@@ -4,6 +4,8 @@ models:
   - name: fact_reviews
     description: Source of truth for review data.
     columns:
+      - name: review_id
+        description: Unique identifier of review
       - name: user_index
         description: Incremental index assigned to each user in order of appearance
       - name: game_index

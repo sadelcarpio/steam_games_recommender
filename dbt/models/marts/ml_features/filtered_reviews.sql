@@ -1,9 +1,9 @@
 -- models/intermediate/filtered_reviews.sql
-{{ config(materialized='view') }}
+{{ config(materialized='view', enabled=false) }}
 
 WITH reviews AS (
     SELECT *
-    FROM {{ ref('int_deduplicated_reviews') }}
+    FROM {{ ref('fact_reviews') }}
 ),
 
 user_counts AS (
