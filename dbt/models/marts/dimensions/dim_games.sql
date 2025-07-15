@@ -33,3 +33,4 @@ WITH first_review AS (SELECT game_id,
                                           USING (game_id))
 SELECT ROW_NUMBER() OVER (ORDER BY game_prerelease_date NULLS LAST) - 1 AS game_index, *
 FROM games_imputed
+WHERE game_release_date IS NOT NULL

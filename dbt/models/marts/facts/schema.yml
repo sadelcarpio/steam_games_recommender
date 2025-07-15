@@ -6,12 +6,20 @@ models:
     columns:
       - name: review_id
         description: Unique identifier of review
+        tests:
+          - not_null
       - name: user_index
         description: Incremental index assigned to each user in order of appearance
+        tests:
+          - relationships:
+              to: ref('dim_users')
+              field: user_index
       - name: game_index
         description: Incremental index assigned to each game in order of appearance
-      - name: review_id
-        description: Unique identifier of review
+        tests:
+          - relationships:
+              to: ref('dim_games')
+              field: game_index
       - name: review
         description: Review text
       - name: written_during_early_access
@@ -26,3 +34,5 @@ models:
         description: Number of comments the review had
       - name: timestamp_created
         description: Creation timestamp of review on UTC
+        tests:
+          - not_null

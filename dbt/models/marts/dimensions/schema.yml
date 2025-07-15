@@ -24,10 +24,14 @@ models:
         description: Release date of the game, as listed in Steam. Can be null
       - name: game_release_date
         description: Release date of the game, if null replaced by first review timestamp of the game.
+        tests:
+          - not_null
       - name: game_prerelease_date
         description: > 
           Source for the first reference of the game on Steam. It's either the first review timestamp (early access) 
           or the `game_release_date`, whichever comes first
+        tests:
+          - not_null
       - name: game_short_description
         description: Short description of the game
       - name: game_review_score
@@ -62,3 +66,5 @@ models:
         description: Incremental index assigned to each user in order of appearance (see `first_review_timestamp`)
       - name: first_review_timestamp
         description: Steam Game id.
+        tests:
+          - not_null
