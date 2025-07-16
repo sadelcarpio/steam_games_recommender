@@ -13,6 +13,6 @@ dependencies = [
     "polars[pyarrow]>=1.30.0",
     "seaborn>=0.13.2",
     "torch>=2.7.1",
-    "torchmetrics>=1.7.4",
-    "torchrec>=0.4.0",
+    "torchmetrics>=1.0.3",
+    "torchrec>=1.2.0"
 ]

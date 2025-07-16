@@ -2,21 +2,7 @@ import re
 import time
 
 import polars as pl
-import requests
-
-
-def get_app_data(url: str, appid: str):
-    response = requests.get(url, params={"appids": appid, "l": "english"})
-    response.raise_for_status()
-    return response.json()
-
-
-def get_app_reviews(url: str, appid: str, filt: str, cursor: str = "*"):
-    response = requests.get(f"{url}/{appid}",
-                            params={"json": "1", "filter": filt, "cursor": cursor, "num_per_page": "100"})
-    response.raise_for_status()
-    return response.json()
-
+from utils.steam_api import get_app_data, get_app_reviews
 
 if __name__ == "__main__":
     df = pl.read_csv("../../data/raw/games/steam_games.csv")
@@ -57,6 +43,8 @@ if __name__ == "__main__":
     try:
         for i, row in enumerate(df.iter_rows()):
             appid = row[0]
+            data = None
+            game_reviews_data = None
             for tries in range(10):
                 try:
                     time.sleep(1.6)
@@ -68,7 +56,7 @@ if __name__ == "__main__":
                 else:
                     break
 
-            if data and data.get(str(appid)).get("success") and game_reviews_data.get("reviews") is not None:
+            if data and data.get(str(appid), {}).get("success") and game_reviews_data and game_reviews_data.get("reviews") is not None:
                 app_info = data[str(appid)]["data"]
                 if app_info["short_description"] == '' or not app_info.get("supported_languages") or not \
                         app_info["pc_requirements"] or not app_info.get("genres") or not app_info.get("categories"):

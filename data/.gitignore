@@ -3,3 +3,4 @@ preprocessed/
 raw/
 marts/
 *.duckdb
+firestore/

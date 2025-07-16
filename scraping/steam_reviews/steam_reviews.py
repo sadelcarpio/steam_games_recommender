@@ -1,13 +1,7 @@
-import requests
 import time
 import polars as pl
 
-
-def get_app_reviews(url: str, appid: str, filt: str, cursor: str = "*"):
-    response = requests.get(f"{url}/{appid}",
-                            params={"json": "1", "filter": filt, "cursor": cursor, "num_per_page": "100"})
-    response.raise_for_status()
-    return response.json()
+from utils.steam_api import get_app_reviews
 
 
 def create_review_record(review: dict, appid: int):
