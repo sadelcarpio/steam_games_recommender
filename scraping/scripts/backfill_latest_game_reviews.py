@@ -19,7 +19,7 @@ if __name__ == '__main__':
     batch_size = 0
     for i, record in enumerate(records):
         doc_ref = db.collection("games").document(str(record["appid"]))
-        batch.set(doc_ref, {"latest_timestamp": record["timestamp_created"].isoformat()})
+        batch.set(doc_ref, {"latest_timestamp": record["timestamp_created"]})
         batch_size += 1
         print(f"Uploading record {i}/{num_records}: {record}")
         if batch_size == 500:

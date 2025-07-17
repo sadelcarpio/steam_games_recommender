@@ -1,5 +1,8 @@
+import os
 import time
+from datetime import datetime, UTC
 import polars as pl
+from google.cloud import firestore
 
 from utils.steam_api import get_app_reviews
 
@@ -33,7 +36,22 @@ def create_review_record(review: dict, appid: int):
     }
 
 
-PATH = "../../../data/steam_games.parquet"
+def fetch_latest_reviews_timestamps_per_app(ref):
+    docs = ref.stream()
+    latest_timestamps = {}
+    for doc in docs:
+        latest_ts_data = doc.to_dict()
+        game_id = doc.id
+        latest_ts = latest_ts_data.get("latest_timestamp")
+        print(f"Game {game_id} has latest timestamp {latest_ts}")
+        latest_timestamps[game_id] = latest_ts
+    return latest_timestamps
+
+
+PATH = "../../data/raw/games/steam_games.parquet"
+os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
+db = firestore.Client(project="steam-games-recommender")
+collection_ref = db.collection("games")
 
 recommended_games = pl.read_parquet(PATH)
 schema = {
@@ -65,9 +83,15 @@ reviews = pl.DataFrame(
     schema=schema
 )
 
+latest_timestamps = fetch_latest_reviews_timestamps_per_app(collection_ref)
+
 batch = 0
 processed = 0
+finish = False
 for item, game in enumerate(recommended_games.iter_rows(named=True)):
+    if finish:
+        finish = False
+        continue
     cursor = "*"
     user_reviews = []
     appid = game["appid"]
@@ -78,7 +102,26 @@ for item, game in enumerate(recommended_games.iter_rows(named=True)):
     except Exception:
         print(f"Quota limit reached for executor. {appid}. Left in row {item}")
         break
+    if len(data.get("reviews")) == 0:
+        print(f"No reviews found for app {appid} ({app_name})")
+        continue
+    latest_timestamp = datetime.fromtimestamp(data["reviews"][0]["timestamp_created"], UTC)
+    if latest_timestamps.get(str(appid)) is None:
+        print(f"Adding {appid} latest timestamp to {latest_timestamp}")
+        latest_timestamps[str(appid)] = latest_timestamp
+        doc_ref = db.collection("games").document(str(appid))
+        doc_ref.set({"latest_timestamp": latest_timestamp})
+    elif latest_timestamp > latest_timestamps.get(str(appid)):
+        print(f"Modifying {appid} latest timestamp to {latest_timestamp}")
+        doc_ref = db.collection("games").document(str(appid))
+        doc_ref.update({"latest_timestamp": latest_timestamp})
+    else:
+        print(f"Skipping app {appid} ({app_name}) as it has no new reviews")
+        continue
     for review in data["reviews"]:
+        if review["timestamp_created"] < latest_timestamps.get(str(appid)):
+            print(f"Skipping review {review['rec_id']} as it is older than latest timestamp")
+            continue
         record = create_review_record(review, appid)
         processed += 1
         print(f"Processed {processed} reviews for app {appid} ({app_name})")
@@ -95,6 +138,8 @@ for item, game in enumerate(recommended_games.iter_rows(named=True)):
     else:
         total_iter = 100000  # large value
     for i in range(1, total_iter + 1):
+        if finish:
+            break
         print(i)
         for tries in range(10):
             try:
@@ -107,26 +152,37 @@ for item, game in enumerate(recommended_games.iter_rows(named=True)):
                 time.sleep(10)
             else:
                 break
-        # extract useful information
         if not data.get("reviews"):
             break
-        for review in data["reviews"]:
-            record = create_review_record(review, appid)
-            processed += 1
-            print(f"Processed {processed} reviews for app {appid} ({app_name})")
-            user_reviews.append(
-                record
-            )
-        cursor = data["cursor"]
+        latest_timestamp = datetime.fromtimestamp(data["reviews"][0]["timestamp_created"], UTC)
+        if latest_timestamp > latest_timestamps.get(str(appid)):
+            print(f"Modifying {appid} latest timestamp to {latest_timestamp}")
+            doc_ref = db.collection("games").document(str(appid))
+            doc_ref.update({"latest_timestamp": latest_timestamp})
+            for review in data["reviews"]:
+                if review["timestamp_created"] < latest_timestamps.get(str(appid)):
+                    print(f"Skipping review {review['rec_id']} as it is older than latest timestamp")
+                    continue
+                record = create_review_record(review, appid)
+                processed += 1
+                print(f"Processed {processed} reviews for app {appid} ({app_name})")
+                user_reviews.append(
+                    record
+                )
+            cursor = data["cursor"]
+        else:
+            print(f"Skipping app {appid} ({app_name}) as it has no new reviews")
+            finish = True
+            break
 
     if user_reviews:
         reviews = pl.concat([
             reviews,
             pl.DataFrame(user_reviews, infer_schema_length=None)
         ], how='vertical')
-    if len(reviews) >= 1_000_000:
-        print(f"Reached more than 1_000_000 reviews. Left in row {item}. Writing to {batch}th batch.")
-        reviews.write_parquet(f"../../../data/steam_reviews_{batch}.parquet")
+    if len(reviews) >= 100_000:
+        print(f"Reached more than 100_000 reviews. Left in row {item}. Writing to {batch}th batch.")
+        reviews.write_parquet(f"../../data/raw/reviews_2/steam_reviews_{batch}.parquet")
         reviews = pl.DataFrame(
             infer_schema_length=None,
             schema=schema
@@ -134,4 +190,4 @@ for item, game in enumerate(recommended_games.iter_rows(named=True)):
         processed = 0
         batch += 1
 
-reviews.write_parquet(f"../../../data/steam_reviews_{batch}.parquet")
+reviews.write_parquet(f"../../data/raw/reviews_2/test_steam_reviews_{batch}.parquet")
