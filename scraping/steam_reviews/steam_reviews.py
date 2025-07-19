@@ -191,3 +191,4 @@ for item, game in enumerate(recommended_games.iter_rows(named=True)):
         batch += 1
 
 reviews.write_parquet(f"../../data/raw/reviews_2/test_steam_reviews_{batch}.parquet")
+# LATEST LOG: Quota limit reached for executor. 3258560. Left in row 132635

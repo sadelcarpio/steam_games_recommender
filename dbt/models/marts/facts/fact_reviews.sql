@@ -4,7 +4,10 @@
 {#    location='../data/marts/review_features.parquet',#}
 {#    format='parquet'#}
 {#) }}#}
-{{ config(materialized='table') }}
+{{ config(
+    materialized='incremental',
+    unique_key='review_id'
+) }}
 SELECT r.review_id,
        u.user_index,
        g.game_index,
@@ -20,3 +23,10 @@ FROM {{ ref('int_deduplicated_reviews') }} r
               ON r.game_id = g.game_id
          JOIN {{ ref('dim_users') }} u
               ON r.user_id = u.user_id
+{% if is_incremental() %}
+WHERE r.timestamp_created > COALESCE((
+    SELECT MAX(timestamp_created)
+    FROM {{ this }} t
+    WHERE t.game_index = g.game_index
+), '1970-01-01')
+{% endif %}

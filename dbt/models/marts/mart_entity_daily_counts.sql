@@ -21,7 +21,7 @@ daily_users AS (
     FROM
         {{ ref('dim_users') }}
     {% if is_incremental() %}
-        WHERE DATE(timestamp_created) > (SELECT MAX(review_day) FROM {{ this }})
+        WHERE DATE(first_review_timestamp) > (SELECT MAX(review_day) FROM {{ this }})
     {% endif %}
     GROUP BY 1
 ),
@@ -32,7 +32,7 @@ daily_games AS (
     FROM
         {{ ref('dim_games') }}
     {% if is_incremental() %}
-        WHERE DATE(timestamp_created) > (SELECT MAX(review_day) FROM {{ this }})
+        WHERE DATE(game_prerelease_date) > (SELECT MAX(review_day) FROM {{ this }})
     {% endif %}
     GROUP BY 1
 ),
