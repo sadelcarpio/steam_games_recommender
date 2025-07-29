@@ -17,16 +17,13 @@ SELECT r.review_id,
        r.weighted_vote_score,
        r.votes_up,
        r.comment_count,
-       r.timestamp_created
+       r.timestamp_created,
+       r.scrape_date
 FROM {{ ref('int_deduplicated_reviews') }} r
          JOIN {{ ref('dim_games') }} g
               ON r.game_id = g.game_id
          JOIN {{ ref('dim_users') }} u
               ON r.user_id = u.user_id
 {% if is_incremental() %}
-WHERE r.timestamp_created > COALESCE((
-    SELECT MAX(timestamp_created)
-    FROM {{ this }} t
-    WHERE t.game_index = g.game_index
-), '1970-01-01')
+WHERE r.scrape_date > (SELECT MAX(scrape_date) FROM {{ this }})
 {% endif %}

@@ -32,7 +32,8 @@ def create_review_record(review: dict, appid: int):
         "steam_purchase": review["steam_purchase"],
         "received_for_free": review["received_for_free"],
         "written_during_early_access": review["written_during_early_access"],
-        "primarily_steam_deck": review["primarily_steam_deck"]
+        "primarily_steam_deck": review["primarily_steam_deck"],
+        "scrape_date": datetime.now(UTC).date()
     }
 
 
@@ -76,7 +77,8 @@ schema = {
     "steam_purchase": pl.Boolean,
     "received_for_free": pl.Boolean,
     "written_during_early_access": pl.Boolean,
-    "primarily_steam_deck": pl.Boolean
+    "primarily_steam_deck": pl.Boolean,
+    "scrape_date": pl.Date,
 }
 reviews = pl.DataFrame(
     infer_schema_length=None,

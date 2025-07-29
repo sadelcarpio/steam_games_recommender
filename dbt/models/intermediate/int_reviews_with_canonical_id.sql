@@ -1,4 +1,4 @@
--- models/intermediate/int_cleaned_reviews.sql
+-- models/intermediate/int_deduplicated_reviews.sql
 {{ config(materialized='view') }}
 
 SELECT r.review_id,
@@ -6,6 +6,7 @@ SELECT r.review_id,
        COALESCE(m.canonical_game_id, r.game_id) AS game_id,  -- maps to a single game id
        r.review,
        r.timestamp_created,
+       r.scrape_date,
        r.written_during_early_access,
        r.voted_up,
        r.weighted_vote_score,
