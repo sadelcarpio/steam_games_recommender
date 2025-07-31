@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: game_rolling_features
+  - name: daily_game_metrics
     description: Games data with rolling scores calculated on a day to day basis
     columns:
       - name: game_index

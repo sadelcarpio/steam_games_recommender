@@ -1,4 +1,4 @@
--- models/marts/dimensions/dim_games_imputed.sql
+-- models/marts/dimensions/dim_games.sql
 {{ config(
     materialized='table'
 ) }}

@@ -21,6 +21,5 @@ SELECT appid                          AS game_id,
        review_score_desc              AS game_review_score_description,
        total_reviews                  AS game_total_reviews,
        total_positive_reviews         AS game_total_positive_reviews,
-       total_negative_reviews         AS game_total_negative_reviews,
-       CAST(scrape_date AS TIMESTAMP) AS game_scrape_date
-FROM filtered QUALIFY ROW_NUMBER() OVER (PARTITION BY game_id ORDER BY scrape_date) = 1
+       total_negative_reviews         AS game_total_negative_reviews
+FROM filtered

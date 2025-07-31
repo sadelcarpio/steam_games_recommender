@@ -1,6 +1,6 @@
--- models/marts/ml_features/mart_game_features.sql
+-- models/marts/ml_features/daily_game_metrics.sql
 {{ config(
-    materialized='table'
+    materialized='view'
 ) }}
 WITH cumulative AS (
     SELECT
@@ -44,10 +44,10 @@ FROM {{ ref('fact_reviews') }}
     GROUP BY game_index, review_day
 )
 SELECT
-    g.*,
-    a.review_day AS game_review_day,
-    a.num_reviews AS game_num_reviews,
-    a.num_positive_reviews AS game_num_positive_reviews,
-    a.num_negative_reviews AS game_num_negative_reviews,
-    a.weighted_score AS game_weighted_score
-FROM aggregated a JOIN {{ ref('dim_games') }} g USING (game_index)
+    game_index,
+    review_day AS game_review_day,
+    num_reviews AS game_num_reviews,
+    num_positive_reviews AS game_num_positive_reviews,
+    num_negative_reviews AS game_num_negative_reviews,
+    weighted_score AS game_weighted_score
+FROM aggregated
