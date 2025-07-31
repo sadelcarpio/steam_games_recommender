@@ -36,3 +36,5 @@ models:
         description: Creation timestamp of review on UTC
         tests:
           - not_null
+      - name: scrape_date
+        description: Date on which the review was scraped

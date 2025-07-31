@@ -1,5 +1,6 @@
 import re
 import time
+from datetime import datetime, UTC
 
 import polars as pl
 from utils.steam_api import get_app_data, get_app_reviews
@@ -37,7 +38,8 @@ if __name__ == "__main__":
             "review_score_desc": pl.String,
             "total_positive_reviews": pl.Int64,
             "total_negative_reviews": pl.Int64,
-            "total_reviews": pl.Int64
+            "total_reviews": pl.Int64,
+            "scrape_date": pl.Date,
         }
     )
     try:
@@ -120,7 +122,8 @@ if __name__ == "__main__":
                     "review_score_desc": game_reviews_data["query_summary"]["review_score_desc"],
                     "total_positive_reviews": game_reviews_data["query_summary"]["total_positive"],
                     "total_negative_reviews": game_reviews_data["query_summary"]["total_negative"],
-                    "total_reviews": game_reviews_data["query_summary"]["total_reviews"]
+                    "total_reviews": game_reviews_data["query_summary"]["total_reviews"],
+                    "scrape_date": datetime.now(UTC).date()
                 }
 
                 print(f"Finished processing element #{appid} in iteration #{i}")

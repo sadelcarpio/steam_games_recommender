@@ -85,6 +85,8 @@ models:
         description: How many votes up did the review have
       - name: comment_count
         description: Number of comments the review had
+      - name: scrape_date
+        description: Date on which review was scraped
 
   - name: int_deduplicated_reviews
     description: Deduplicates review data by review_id
