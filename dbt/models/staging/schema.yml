@@ -38,12 +38,6 @@ models:
           8 -> Positive
           9 -> Very Positive
           10 -> Overwhelmingly Positive
-      - name: game_total_reviews
-        description: All-time total reviews from Steam
-      - name: game_total_positive_reviews
-        description: All-time total positive reviews
-      - name: game_total_negative_reviews
-        description: All-time total negative reviews
 
   - name: stg_reviews
     description: Review data from all available Steam games

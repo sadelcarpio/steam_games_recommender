@@ -19,7 +19,4 @@ SELECT appid                          AS game_id,
        short_description              AS game_short_description,
        review_score                   AS game_review_score,
        review_score_desc              AS game_review_score_description,
-       total_reviews                  AS game_total_reviews,
-       total_positive_reviews         AS game_total_positive_reviews,
-       total_negative_reviews         AS game_total_negative_reviews
 FROM filtered

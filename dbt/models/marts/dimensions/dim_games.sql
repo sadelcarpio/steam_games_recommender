@@ -24,10 +24,7 @@ WITH first_review AS (SELECT game_id,
                                   END                                                       AS game_prerelease_date,
                               g.game_short_description,
                               g.game_review_score,
-                              g.game_review_score_description,
-                              g.game_total_reviews,
-                              g.game_total_positive_reviews,
-                              g.game_total_negative_reviews
+                              g.game_review_score_description
                        FROM {{ ref('int_deduplicated_games') }} g
                                 LEFT JOIN first_review
                                           USING (game_id))

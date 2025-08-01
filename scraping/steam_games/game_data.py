@@ -36,9 +36,6 @@ if __name__ == "__main__":
             "dlc": pl.List(pl.Int64),
             "review_score": pl.Int64,
             "review_score_desc": pl.String,
-            "total_positive_reviews": pl.Int64,
-            "total_negative_reviews": pl.Int64,
-            "total_reviews": pl.Int64,
             "scrape_date": pl.Date,
         }
     )
@@ -120,9 +117,6 @@ if __name__ == "__main__":
                     "dlc": app_info.get("dlc", []),
                     "review_score": game_reviews_data["query_summary"]["review_score"],
                     "review_score_desc": game_reviews_data["query_summary"]["review_score_desc"],
-                    "total_positive_reviews": game_reviews_data["query_summary"]["total_positive"],
-                    "total_negative_reviews": game_reviews_data["query_summary"]["total_negative"],
-                    "total_reviews": game_reviews_data["query_summary"]["total_reviews"],
                     "scrape_date": datetime.now(UTC).date()
                 }
 
