@@ -19,4 +19,5 @@ SELECT appid                          AS game_id,
        short_description              AS game_short_description,
        review_score                   AS game_review_score,
        review_score_desc              AS game_review_score_description,
+       scrape_date                    AS game_scrape_date
 FROM filtered

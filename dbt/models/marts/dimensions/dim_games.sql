@@ -1,6 +1,6 @@
 -- models/marts/dimensions/dim_games.sql
 {{ config(
-    materialized='table'
+    materialized='incremental'
 ) }}
 WITH first_review AS (SELECT game_id,
                              MIN(timestamp_created) AS first_review_date
@@ -23,6 +23,7 @@ WITH first_review AS (SELECT game_id,
                                   ELSE COALESCE(g.game_release_date, first_review.first_review_date)
                                   END                                                       AS game_prerelease_date,
                               g.game_short_description,
+                              g.game_scrape_date,
                               g.game_review_score,
                               g.game_review_score_description
                        FROM {{ ref('int_deduplicated_games') }} g
@@ -31,3 +32,6 @@ WITH first_review AS (SELECT game_id,
 SELECT ROW_NUMBER() OVER (ORDER BY game_prerelease_date NULLS LAST) - 1 AS game_index, *
 FROM games_imputed
 WHERE game_release_date IS NOT NULL
+{% if is_incremental() %}
+WHERE r.scrape_date > (SELECT MAX(scrape_date) FROM {{ this }})
+{% endif %}
