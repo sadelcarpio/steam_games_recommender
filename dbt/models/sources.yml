@@ -11,3 +11,7 @@ sources:
         config:
           external_location: "{{ env_var('RAW_GAMES_LOCATION', '../data/raw/games/steam_games.parquet') }}"
           format: parquet
+      - name: app_ids
+        config:
+          external_location: "{{ env_var('STEAM_IDS_LOCATION', '../data/raw/games/steam_ids.parquet') }}"
+          format: parquet
