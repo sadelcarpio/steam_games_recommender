@@ -7,8 +7,6 @@ import polars as pl
 from utils.steam_api import get_app_data, get_app_reviews, download_all_steam_games
 
 if __name__ == "__main__":
-    game_ids = download_all_steam_games()
-    existing_game_ids = pl.read_csv("../../data/raw/games/steam_games.csv")
     duckdb_conn = duckdb.connect('../../data/steam.duckdb', read_only=True)
     df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
     apps_features_df = pl.DataFrame(
