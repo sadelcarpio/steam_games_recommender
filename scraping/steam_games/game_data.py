@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 
 import duckdb
 import polars as pl
-from utils.steam_api import get_app_data, get_app_reviews, download_all_steam_games
+from utils.steam_api import get_app_data, get_app_reviews
 
 if __name__ == "__main__":
     duckdb_conn = duckdb.connect('../../data/steam.duckdb', read_only=True)
@@ -130,6 +130,8 @@ if __name__ == "__main__":
                 ], how='vertical')
     except Exception as e:
         print(e)
+    finally:
+        duckdb_conn.close()
 
     print(apps_features_df)
     apps_features_df.write_parquet("../../data/steam_games_full.parquet")
