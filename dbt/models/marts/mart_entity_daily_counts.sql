@@ -1,7 +1,6 @@
 -- models/marts/mart_entity_daily_counts.sql
 {{ config(
-    materialized='incremental',
-    unique_key='review_day'
+    materialized='table'
 ) }}
 WITH daily_reviews AS (
     SELECT
@@ -9,9 +8,6 @@ WITH daily_reviews AS (
     COUNT(*) AS daily_reviews_count
     FROM
         {{ ref('fact_reviews') }}
-    {% if is_incremental() %}
-        WHERE DATE(timestamp_created) > (SELECT MAX(review_day) FROM {{ this }})
-    {% endif %}
     GROUP BY 1
 ),
 daily_users AS (
@@ -20,9 +16,6 @@ daily_users AS (
     COUNT(*) AS new_users
     FROM
         {{ ref('dim_users') }}
-    {% if is_incremental() %}
-        WHERE DATE(first_review_timestamp) > (SELECT MAX(review_day) FROM {{ this }})
-    {% endif %}
     GROUP BY 1
 ),
 daily_games AS (
@@ -31,9 +24,6 @@ daily_games AS (
     COUNT(*) AS daily_games_count
     FROM
         {{ ref('dim_games') }}
-    {% if is_incremental() %}
-        WHERE DATE(game_prerelease_date) > (SELECT MAX(review_day) FROM {{ this }})
-    {% endif %}
     GROUP BY 1
 ),
 all_days AS (
