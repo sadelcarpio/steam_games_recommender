@@ -1,4 +1,6 @@
 import os
+
+import duckdb
 import time
 from datetime import datetime, UTC
 from typing import Dict, List, Optional, Tuple
@@ -220,14 +222,13 @@ class ReviewProcessor:
 
 
 def main():
-    PATH = "../../data/raw/games/steam_games.parquet"
     os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
     db = firestore.Client(project="steam-games-recommender")
-
-    processor = ReviewProcessor(db)
+    processor = ReviewProcessor(db, batch_size=1000)
     processor.load_latest_timestamps_cache()  # Single read operation
 
-    recommended_games = pl.read_parquet(PATH)
+    duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
+    recommended_games = duckdb_conn.sql("SELECT appid FROM stg_games").pl()
     reviews = pl.DataFrame(infer_schema_length=None, schema=processor.schema)
 
     batch_num = 0
@@ -254,7 +255,12 @@ def main():
             # Batch write reviews and flush timestamp updates
             if len(reviews) >= processor.batch_size:
                 print(f"Writing batch {batch_num} with {len(reviews)} reviews...")
-                reviews.write_parquet(f"../../data/raw/reviews_2/steam_reviews_{batch_num}.parquet")
+                scrape_date = datetime.now(UTC).date()
+                reviews.write_parquet(f"s3://raw/reviews/steam_reviews_{scrape_date}_{batch_num}.parquet",
+                                      storage_options={"aws_access_key_id": 'minioadmin',
+                                                       "aws_secret_access_key": 'minioadmin',
+                                                       "aws_region": "us-east-1",
+                                                       "aws_endpoint_url": "http://localhost:9000"})
                 processor.flush_timestamp_updates()  # Batch Firestore updates
 
                 # Reset for next batch

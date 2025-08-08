@@ -53,14 +53,16 @@ if __name__ == "__main__":
                 try:
                     time.sleep(1.6)
                     data = get_app_data("https://store.steampowered.com/api/appdetails", appid)
-                    game_reviews_data = get_app_reviews("https://store.steampowered.com/appreviews", appid=appid, filt="recent")
+                    game_reviews_data = get_app_reviews("https://store.steampowered.com/appreviews", appid=appid,
+                                                        filt="recent")
                 except Exception:
                     print(f"Quota limit reached for executor. {appid}. Left in row {i}")
                     time.sleep(10)
                 else:
                     break
 
-            if data and data.get(str(appid), {}).get("success") and game_reviews_data and game_reviews_data.get("reviews") is not None:
+            if data and data.get(str(appid), {}).get("success") and game_reviews_data and game_reviews_data.get(
+                    "reviews") is not None:
                 app_info = data[str(appid)]["data"]
                 if app_info["short_description"] == '' or not app_info.get("supported_languages") or not \
                         app_info["pc_requirements"] or not app_info.get("genres") or not app_info.get("categories"):
@@ -137,4 +139,9 @@ if __name__ == "__main__":
         duckdb_conn.close()
 
     print(apps_features_df)
-    apps_features_df.write_parquet("../data/raw/games/steam_games_3.parquet")
+    scrape_date = datetime.now(UTC).date()
+    apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}.parquet",
+                                   storage_options={"aws_access_key_id": 'minioadmin',
+                                                    "aws_secret_access_key": 'minioadmin',
+                                                    "aws_region": "us-east-1",
+                                                    "aws_endpoint_url": "http://localhost:9000"})
