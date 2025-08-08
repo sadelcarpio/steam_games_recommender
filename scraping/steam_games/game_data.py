@@ -6,46 +6,51 @@ import duckdb
 import polars as pl
 from utils.steam_api import get_app_data, get_app_reviews
 
+
+def create_apps_features_df() -> pl.DataFrame:
+    return pl.DataFrame(infer_schema_length=None, schema={
+        "appid": pl.Int64,
+        "name": pl.Utf8,
+        "type": pl.String,
+        "required_age": pl.Int64,
+        "is_free": pl.Boolean,
+        "minimum_pc_requirements": pl.Utf8,
+        "recommended_pc_requirements": pl.Utf8,
+        "controller_support": pl.String,
+        "detailed_description": pl.Utf8,
+        "about_the_game": pl.Utf8,
+        "short_description": pl.Utf8,
+        "supported_languages": pl.List(pl.String),
+        "header_image": pl.String,
+        "developers": pl.List(pl.String),
+        "publishers": pl.List(pl.String),
+        "price": pl.Float64,
+        "categories": pl.List(pl.String),
+        "genres": pl.List(pl.String),
+        "windows_support": pl.Boolean,
+        "mac_support": pl.Boolean,
+        "linux_support": pl.Boolean,
+        "release_date": pl.String,
+        "coming_soon": pl.Boolean,
+        "recommendations": pl.Int64,
+        "dlc": pl.List(pl.Int64),
+        "review_score": pl.Int64,
+        "review_score_desc": pl.String,
+        "scrape_date": pl.Date,
+    })
+
+
 if __name__ == "__main__":
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
+    batch_size = 10_000
+    processed_count = 0
+    scrape_date = datetime.now(UTC).date()
     df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
-    apps_features_df = pl.DataFrame(
-        schema={
-            "appid": pl.Int64,
-            "name": pl.Utf8,
-            "type": pl.String,
-            "required_age": pl.Int64,
-            "is_free": pl.Boolean,
-            "minimum_pc_requirements": pl.Utf8,
-            "recommended_pc_requirements": pl.Utf8,
-            "controller_support": pl.String,
-            "detailed_description": pl.Utf8,
-            "about_the_game": pl.Utf8,
-            "short_description": pl.Utf8,
-            "supported_languages": pl.List(pl.String),
-            "header_image": pl.String,
-            "developers": pl.List(pl.String),
-            "publishers": pl.List(pl.String),
-            "price": pl.Float64,
-            "categories": pl.List(pl.String),
-            "genres": pl.List(pl.String),
-            "windows_support": pl.Boolean,
-            "mac_support": pl.Boolean,
-            "linux_support": pl.Boolean,
-            "release_date": pl.String,
-            "coming_soon": pl.Boolean,
-            "recommendations": pl.Int64,
-            "dlc": pl.List(pl.Int64),
-            "review_score": pl.Int64,
-            "review_score_desc": pl.String,
-            "scrape_date": pl.Date,
-        }
-    )
     total_apps = len(df)
+    duckdb_conn.close()
+    apps_features_df = create_apps_features_df()
     try:
         for i, row in enumerate(df.iter_rows()):
-            if i < 44340:
-                continue
             appid = row[0]
             data = None
             game_reviews_data = None
@@ -124,24 +129,33 @@ if __name__ == "__main__":
                     "dlc": app_info.get("dlc", []),
                     "review_score": game_reviews_data["query_summary"].get("review_score", None),
                     "review_score_desc": game_reviews_data["query_summary"].get("review_score_desc", None),
-                    "scrape_date": datetime.now(UTC).date()
+                    "scrape_date": scrape_date
                 }
 
                 print(f"Finished processing element #{appid} in iteration #{i} / {total_apps}")
-
+                processed_count += 1
                 apps_features_df = pl.concat([
                     apps_features_df,
                     pl.DataFrame([record])
                 ], how='vertical')
+                if processed_count >= batch_size:
+                    batch_num = i // batch_size
+                    print(f"Writing batch {batch_num}")
+                    apps_features_df.write_parquet(f"s3://raw/reviews/steam_games_{scrape_date}_{batch_num}.parquet",
+                                                   storage_options={"aws_access_key_id": 'minioadmin',
+                                                                    "aws_secret_access_key": 'minioadmin',
+                                                                    "aws_region": "us-east-1",
+                                                                    "aws_endpoint_url": "http://localhost:9000"})
+                    # Reset for next batch
+                    apps_features_df = create_apps_features_df()
+                    processed_count = 0
     except Exception as e:
         print(e)
     finally:
-        duckdb_conn.close()
-
-    print(apps_features_df)
-    scrape_date = datetime.now(UTC).date()
-    apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}.parquet",
-                                   storage_options={"aws_access_key_id": 'minioadmin',
-                                                    "aws_secret_access_key": 'minioadmin',
-                                                    "aws_region": "us-east-1",
-                                                    "aws_endpoint_url": "http://localhost:9000"})
+        batch_num = total_apps // batch_size + 1
+        print(f"Writing final batch {batch_num}")
+        apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
+                                       storage_options={"aws_access_key_id": 'minioadmin',
+                                                        "aws_secret_access_key": 'minioadmin',
+                                                        "aws_region": "us-east-1",
+                                                        "aws_endpoint_url": "http://localhost:9000"})
