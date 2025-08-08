@@ -2,5 +2,7 @@
 preprocessed/
 raw/
 marts/
+minio/*
+.idea/
 *.duckdb
 firestore/

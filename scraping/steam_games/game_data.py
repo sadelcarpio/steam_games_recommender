@@ -7,7 +7,7 @@ import polars as pl
 from utils.steam_api import get_app_data, get_app_reviews
 
 if __name__ == "__main__":
-    duckdb_conn = duckdb.connect('../../data/steam.duckdb', read_only=True)
+    duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
     df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
     apps_features_df = pl.DataFrame(
         schema={
@@ -41,8 +41,11 @@ if __name__ == "__main__":
             "scrape_date": pl.Date,
         }
     )
+    total_apps = len(df)
     try:
         for i, row in enumerate(df.iter_rows()):
+            if i < 44340:
+                continue
             appid = row[0]
             data = None
             game_reviews_data = None
@@ -117,12 +120,12 @@ if __name__ == "__main__":
                     "coming_soon": app_info["release_date"]["coming_soon"],
                     "recommendations": recommendations,
                     "dlc": app_info.get("dlc", []),
-                    "review_score": game_reviews_data["query_summary"]["review_score"],
-                    "review_score_desc": game_reviews_data["query_summary"]["review_score_desc"],
+                    "review_score": game_reviews_data["query_summary"].get("review_score", None),
+                    "review_score_desc": game_reviews_data["query_summary"].get("review_score_desc", None),
                     "scrape_date": datetime.now(UTC).date()
                 }
 
-                print(f"Finished processing element #{appid} in iteration #{i}")
+                print(f"Finished processing element #{appid} in iteration #{i} / {total_apps}")
 
                 apps_features_df = pl.concat([
                     apps_features_df,
@@ -134,4 +137,4 @@ if __name__ == "__main__":
         duckdb_conn.close()
 
     print(apps_features_df)
-    apps_features_df.write_parquet("../../data/steam_games_full.parquet")
+    apps_features_df.write_parquet("../data/raw/games/steam_games_3.parquet")

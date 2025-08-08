@@ -33,5 +33,5 @@ SELECT ROW_NUMBER() OVER (ORDER BY game_prerelease_date NULLS LAST) - 1 AS game_
 FROM games_imputed
 WHERE game_release_date IS NOT NULL
 {% if is_incremental() %}
-WHERE r.scrape_date > (SELECT MAX(scrape_date) FROM {{ this }})
+AND game_scrape_date > (SELECT MAX(game_scrape_date) FROM {{ this }})
 {% endif %}
