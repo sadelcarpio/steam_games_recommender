@@ -152,10 +152,11 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
     finally:
-        batch_num = total_apps // batch_size + 1
-        print(f"Writing final batch {batch_num}")
-        apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
-                                       storage_options={"aws_access_key_id": 'minioadmin',
-                                                        "aws_secret_access_key": 'minioadmin',
-                                                        "aws_region": "us-east-1",
-                                                        "aws_endpoint_url": "http://localhost:9000"})
+        if len(apps_features_df) > 0:
+            batch_num = total_apps // batch_size + 1
+            print(f"Writing final batch {batch_num}")
+            apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
+                                           storage_options={"aws_access_key_id": 'minioadmin',
+                                                            "aws_secret_access_key": 'minioadmin',
+                                                            "aws_region": "us-east-1",
+                                                            "aws_endpoint_url": "http://localhost:9000"})
