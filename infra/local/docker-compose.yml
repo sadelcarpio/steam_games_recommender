@@ -25,3 +25,19 @@ services:
         mc anonymous set public localminio/raw;
       exit 0;
       "
+
+  firestore-emulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.firestore
+    container_name: firestore-emulator
+    ports:
+      - "9150:9150"
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - ../../data/firestore:/data
+      - ../../scraping/firebase.json:/workspace/firebase.json
+      - ../../scraping/firestore.rules:/workspace/firestore.rules
+      - ../../scraping/.firebaserc:/workspace/.firebaserc
+    stop_grace_period: 60s  # give time to export before shutting down container
