@@ -141,7 +141,7 @@ if __name__ == "__main__":
                 ], how='vertical')
                 if processed_count >= batch_size:
                     print(f"Writing batch {batch_num}")
-                    apps_features_df.write_parquet(f"s3://raw/reviews/steam_games_{scrape_date}_{batch_num}.parquet",
+                    apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
                                                    storage_options={"aws_access_key_id": 'minioadmin',
                                                                     "aws_secret_access_key": 'minioadmin',
                                                                     "aws_region": "us-east-1",
