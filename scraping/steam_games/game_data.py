@@ -44,6 +44,7 @@ if __name__ == "__main__":
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
     batch_size = 10_000
     processed_count = 0
+    batch_num = 0
     scrape_date = datetime.now(UTC).date()
     df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
     total_apps = len(df)
@@ -139,7 +140,6 @@ if __name__ == "__main__":
                     pl.DataFrame([record])
                 ], how='vertical')
                 if processed_count >= batch_size:
-                    batch_num = i // batch_size
                     print(f"Writing batch {batch_num}")
                     apps_features_df.write_parquet(f"s3://raw/reviews/steam_games_{scrape_date}_{batch_num}.parquet",
                                                    storage_options={"aws_access_key_id": 'minioadmin',
@@ -148,12 +148,12 @@ if __name__ == "__main__":
                                                                     "aws_endpoint_url": "http://localhost:9000"})
                     # Reset for next batch
                     apps_features_df = create_apps_features_df()
+                    batch_num += 1
                     processed_count = 0
     except Exception as e:
         print(e)
     finally:
         if len(apps_features_df) > 0:
-            batch_num = total_apps // batch_size + 1
             print(f"Writing final batch {batch_num}")
             apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
                                            storage_options={"aws_access_key_id": 'minioadmin',
