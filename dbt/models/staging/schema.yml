@@ -38,6 +38,8 @@ models:
           8 -> Positive
           9 -> Very Positive
           10 -> Overwhelmingly Positive
+      - name: scrape_date
+        description: Date on which game was scraped
 
   - name: stg_reviews
     description: Review data from all available Steam games

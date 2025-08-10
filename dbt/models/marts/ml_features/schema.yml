@@ -6,6 +6,20 @@ models:
     columns:
       - name: game_index
         description: Incremental index assigned to each game in order of appearance (see `game_prerelease_date`)
+      - name: game_review_day
+        description: Cutoff day for score computation
+      - name: game_num_reviews
+        description: Number of reviews up to `game_review_day`
+      - name: game_num_positive_reviews
+        description: Number of positive reviews up to `game_review_day`
+      - name: game_num_negative_reviews
+        description: Number of negative reviews up to `game_review_day`
+      - name: game_weighted_score
+        description: Weighted score of the game calculated up to `game_review_day`
+
+  - name: game_features
+    description: Complete set of time-dependent and fixed features for Steam games
+    columns:
       - name: game_id
         description: Unique ID assigned to each game in Steam.
       - name: game_is_free
@@ -25,8 +39,8 @@ models:
       - name: game_release_date
         description: Release date of the game, if null replaced by first review timestamp of the game.
       - name: game_prerelease_date
-        description: > 
-          Source for the first reference of the game on Steam. It's either the first review timestamp (early access) 
+        description: >
+          Source for the first reference of the game on Steam. It's either the first review timestamp (early access)
           or the `game_release_date`, whichever comes first
       - name: game_short_description
         description: Short description of the game
@@ -46,19 +60,3 @@ models:
           8 -> Positive
           9 -> Very Positive
           10 -> Overwhelmingly Positive
-      - name: game_total_reviews
-        description: All-time total reviews from Steam
-      - name: game_total_positive_reviews
-        description: All-time total positive reviews
-      - name: game_total_negative_reviews
-        description: All-time total negative reviews
-      - name: game_review_day
-        description: Cutoff day for score computation
-      - name: game_num_reviews
-        description: Number of reviews up to `game_review_day`
-      - name: game_num_positive_reviews
-        description: Number of positive reviews up to `game_review_day`
-      - name: game_num_negative_reviews
-        description: Number of negative reviews up to `game_review_day`
-      - name: game_weighted_score
-        description: Weighted score of the game calculated up to `game_review_day`
