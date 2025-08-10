@@ -1,0 +1,12 @@
+FROM ghcr.io/astral-sh/uv:debian
+
+WORKDIR /dbt
+RUN apt update && apt install -y curl
+COPY pyproject.toml pyproject.toml
+COPY uv.lock uv.lock
+RUN uv sync --locked
+COPY models/ models
+COPY dbt_project.yml dbt_project.yml
+COPY profiles.yml profiles.yml
+COPY duckdb_init.sql duckdb_init.sql
+ENTRYPOINT ["uv", "run", "dbt"]

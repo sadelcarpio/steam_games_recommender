@@ -42,3 +42,19 @@ services:
       - ../../scraping/firestore.rules:/workspace/firestore.rules
       - ../../scraping/.firebaserc:/workspace/.firebaserc
     stop_grace_period: 60s  # give time to export before shutting down container
+
+  dbt:
+    build:
+      context: ../../dbt
+      dockerfile: ../infra/local/Dockerfile.dbt
+    container_name: dbt
+    volumes:
+      - ../../data/steam.duckdb:/data/steam.duckdb
+
+  scraping:
+    build:
+      context: ../../scraping
+      dockerfile: ../infra/local/Dockerfile.scraping
+    container_name: scraping
+    volumes:
+      - ../../data/steam.duckdb:/data/steam.duckdb
