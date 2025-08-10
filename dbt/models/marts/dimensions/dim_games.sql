@@ -1,6 +1,6 @@
 -- models/marts/dimensions/dim_games.sql
 {{ config(
-    materialized='incremental'
+    materialized='table'
 ) }}
 WITH first_review AS (SELECT game_id,
                              MIN(timestamp_created) AS first_review_date
@@ -32,6 +32,3 @@ WITH first_review AS (SELECT game_id,
 SELECT ROW_NUMBER() OVER (ORDER BY game_prerelease_date NULLS LAST) - 1 AS game_index, *
 FROM games_imputed
 WHERE game_release_date IS NOT NULL
-{% if is_incremental() %}
-AND game_scrape_date > (SELECT MAX(game_scrape_date) FROM {{ this }})
-{% endif %}
