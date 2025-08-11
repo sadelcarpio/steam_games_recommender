@@ -1,3 +1,5 @@
+import os
+
 import re
 import time
 from datetime import datetime, UTC
@@ -145,7 +147,8 @@ if __name__ == "__main__":
                                                    storage_options={"aws_access_key_id": 'minioadmin',
                                                                     "aws_secret_access_key": 'minioadmin',
                                                                     "aws_region": "us-east-1",
-                                                                    "aws_endpoint_url": "http://localhost:9000"})
+                                                                    "aws_endpoint_url": os.environ.get(
+                                                                        "MINIO_ENDPOINT_URL", "http://localhost:9000")})
                     # Reset for next batch
                     apps_features_df = create_apps_features_df()
                     batch_num += 1
@@ -159,4 +162,5 @@ if __name__ == "__main__":
                                            storage_options={"aws_access_key_id": 'minioadmin',
                                                             "aws_secret_access_key": 'minioadmin',
                                                             "aws_region": "us-east-1",
-                                                            "aws_endpoint_url": "http://localhost:9000"})
+                                                            "aws_endpoint_url": os.environ.get("MINIO_ENDPOINT_URL",
+                                                                                               "http://localhost:9000")})

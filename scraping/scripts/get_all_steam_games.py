@@ -1,4 +1,5 @@
 from utils.steam_api import download_all_steam_games
+import os
 
 if __name__ == "__main__":
     df = download_all_steam_games()
@@ -6,4 +7,4 @@ if __name__ == "__main__":
                      storage_options={"aws_access_key_id": 'minioadmin',
                                       "aws_secret_access_key": 'minioadmin',
                                       "aws_region": "us-east-1",
-                                      "aws_endpoint_url": "http://localhost:9000"})
+                                      "aws_endpoint_url": os.environ.get("MINIO_ENDPOINT_URL", "http://localhost:9000")})
