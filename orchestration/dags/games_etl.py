@@ -88,7 +88,6 @@ with DAG(
                   target='/data/steam.duckdb',
                   type='bind')
         ],
-        detach=True,
         tty=True,
         xcom_all=False,
         mount_tmp_dir=False,
