@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta
+from functools import partial
 
-from airflow import DAG
-from airflow.sdk import task
+from airflow.sdk import task, dag
 from airflow.utils.trigger_rule import TriggerRule
 
 
-def should_skip_antijoin(ctx):
+def should_skip_antijoin(table, ctx):
     import duckdb
     duckdb_conn = duckdb.connect('data/steam.duckdb', read_only=True)
-    if "raw_games" not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
+    if table not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
         return True
     return False
 
@@ -20,18 +20,17 @@ default_args = {
     'retry_delay': timedelta(minutes=10)
 }
 
-with DAG(
-        dag_id='games_etl_pipeline',
-        default_args=default_args,
-        start_date=datetime(2025, 8, 10),
-        catchup=False
-) as dag:
 
+@dag(dag_id='games_etl_pipeline',
+     default_args=default_args,
+     start_date=datetime(2025, 8, 10),
+     catchup=False)
+def games_etl_pipeline():
     @task.bash(cwd='/opt/airflow/scraping', env={"MINIO_ENDPOINT_URL": "http://minio:9000"})
     def get_all_candidate_ids():
-        return "uv run python -m scripts.get_all_steam_games"
+        return "uv run python -m steam_games.get_all_steam_games"
 
-    @task.skip_if(should_skip_antijoin)
+    @task.skip_if(partial(should_skip_antijoin, "raw_games"))
     @task.bash(cwd='/opt/airflow/dbt', env={"MINIO_ENDPOINT": "minio:9000"})
     def run_dbt_antijoin():
         return "uv run dbt run --select tag:scraping"
@@ -44,6 +43,7 @@ with DAG(
     def start_game_scraping():
         return "uv run python -m steam_games.game_data"
 
+    @task.skip_if(partial(should_skip_antijoin, "raw_reviews"))
     @task.bash(cwd='/opt/airflow/dbt', env={"MINIO_ENDPOINT": "minio:9000"})
     def run_dbt_models():
         return "uv run dbt run --exclude tag:scraping"
@@ -54,3 +54,6 @@ with DAG(
     run_dbt_models = run_dbt_models()
 
     get_all_candidate_ids >> run_dbt_antijoin >> start_game_scraping >> run_dbt_models
+
+
+dag_instance = games_etl_pipeline()
