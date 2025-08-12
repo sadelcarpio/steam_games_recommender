@@ -3,14 +3,7 @@ from functools import partial
 
 from airflow.sdk import task, dag
 from airflow.utils.trigger_rule import TriggerRule
-
-
-def should_skip_antijoin(table, ctx):
-    import duckdb
-    duckdb_conn = duckdb.connect('data/steam.duckdb', read_only=True)
-    if table not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
-        return True
-    return False
+from utils import should_skip_antijoin
 
 
 default_args = {

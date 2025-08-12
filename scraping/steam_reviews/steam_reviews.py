@@ -155,7 +155,7 @@ class ReviewProcessor:
         total_reviews = data.get("query_summary", {}).get("total_reviews", 0)
         if total_reviews > 100:
             cursor = data.get("cursor")
-            user_reviews.extend(self._fetch_remaining_reviews(appid, app_name, cursor, cached_timestamp, total_reviews))
+            user_reviews.extend(self._fetch_remaining_reviews(appid, cursor, cached_timestamp, total_reviews))
 
         return user_reviews, True
 
@@ -224,7 +224,6 @@ class ReviewProcessor:
                 time.sleep(10 * (attempt + 1))  # Exponential backoff
 
 
-
 def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -232,7 +231,8 @@ def main():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
+    scrape_date = datetime.now(UTC).date()
+    os.environ["FIRESTORE_EMULATOR_HOST"] = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
     db = firestore.Client(project="steam-games-recommender")
     processor = ReviewProcessor(db, batch_size=1000)
     processor.load_latest_timestamps_cache()  # Single read operation
@@ -270,7 +270,8 @@ def main():
                                       storage_options={"aws_access_key_id": 'minioadmin',
                                                        "aws_secret_access_key": 'minioadmin',
                                                        "aws_region": "us-east-1",
-                                                       "aws_endpoint_url": "http://localhost:9000"})
+                                                       "aws_endpoint_url": os.environ.get("MINIO_ENDPOINT_URL",
+                                                                                          "http://localhost:9000")})
                 processor.flush_timestamp_updates()  # Batch Firestore updates
 
                 # Reset for next batch
@@ -286,18 +287,26 @@ def main():
 
     # Final write
     if len(reviews) > 0:
-        reviews.write_parquet(f"../../data/raw/reviews_2/steam_reviews_{batch_num}.parquet")
+        logging.info(f"Writing final batch {batch_num} with {len(reviews)} reviews...")
+        reviews.write_parquet(f"s3://raw/reviews/steam_reviews_{scrape_date}_{batch_num}.parquet",
+                              storage_options={"aws_access_key_id": 'minioadmin',
+                                               "aws_secret_access_key": 'minioadmin',
+                                               "aws_region": "us-east-1",
+                                               "aws_endpoint_url": os.environ.get("MINIO_ENDPOINT_URL",
+                                                                                  "http://localhost:9000")})
 
     # Final flush of any remaining timestamp updates
     processor.flush_timestamp_updates()
     logging.info("Processing completed successfully!")
+
 
 if __name__ == "__main__":
     main()
     # Create raw_reviews view if it doesn't exist
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
     if "raw_reviews" not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
-        duckdb_conn.sql("CREATE VIEW raw_reviews AS SELECT * FROM read_parquet('s3://raw/reviews/steam_reviews_*.parquet')")
+        duckdb_conn.sql(
+            "CREATE VIEW raw_reviews AS SELECT * FROM read_parquet('s3://raw/reviews/steam_reviews_*.parquet')")
         logging.info("Created raw_games view")
     else:
         logging.info("raw_games view already exists. Skipping creation.")
