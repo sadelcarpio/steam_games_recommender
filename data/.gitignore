@@ -1,8 +1,4 @@
-# Project specific
-preprocessed/
-raw/
-marts/
-minio/*
-.idea/
-*.duckdb
 firestore/
+minio/
+*.duckdb
+.idea/

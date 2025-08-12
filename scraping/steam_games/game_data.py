@@ -1,3 +1,5 @@
+import logging
+
 import os
 
 import re
@@ -6,7 +8,7 @@ from datetime import datetime, UTC
 
 import duckdb
 import polars as pl
-from utils.steam_api import get_app_data, get_app_reviews
+from utils.steam_api import get_app_data, get_app_reviews, download_all_steam_games
 
 
 def create_apps_features_df() -> pl.DataFrame:
@@ -44,11 +46,21 @@ def create_apps_features_df() -> pl.DataFrame:
 
 if __name__ == "__main__":
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
     batch_size = 10_000
     processed_count = 0
     batch_num = 0
     scrape_date = datetime.now(UTC).date()
-    df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
+    try:
+        df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
+    except duckdb.CatalogException:
+        # First run. Download all existing appids data
+        logging.warning("`new_ids_to_scrape` table not found. Downloading all existing appids data.")
+        df = download_all_steam_games()
     total_apps = len(df)
     duckdb_conn.close()
     apps_features_df = create_apps_features_df()
@@ -64,7 +76,7 @@ if __name__ == "__main__":
                     game_reviews_data = get_app_reviews("https://store.steampowered.com/appreviews", appid=appid,
                                                         filt="recent")
                 except Exception:
-                    print(f"Quota limit reached for executor. {appid}. Left in row {i}")
+                    logging.warning(f"Quota limit reached for executor. {appid}. Left in row {i}")
                     time.sleep(10)
                 else:
                     break
@@ -135,14 +147,14 @@ if __name__ == "__main__":
                     "scrape_date": scrape_date
                 }
 
-                print(f"Finished processing element #{appid} in iteration #{i} / {total_apps}")
+                logging.info(f"Finished processing element #{appid} in iteration #{i} / {total_apps}")
                 processed_count += 1
                 apps_features_df = pl.concat([
                     apps_features_df,
                     pl.DataFrame([record])
                 ], how='vertical')
                 if processed_count >= batch_size:
-                    print(f"Writing batch {batch_num}")
+                    logging.info(f"Writing batch {batch_num}")
                     apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
                                                    storage_options={"aws_access_key_id": 'minioadmin',
                                                                     "aws_secret_access_key": 'minioadmin',
@@ -154,13 +166,21 @@ if __name__ == "__main__":
                     batch_num += 1
                     processed_count = 0
     except Exception as e:
-        print(e)
+        logging.error(e)
     finally:
         if len(apps_features_df) > 0:
-            print(f"Writing final batch {batch_num}")
+            logging.info(f"Writing final batch {batch_num}")
             apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
                                            storage_options={"aws_access_key_id": 'minioadmin',
                                                             "aws_secret_access_key": 'minioadmin',
                                                             "aws_region": "us-east-1",
                                                             "aws_endpoint_url": os.environ.get("MINIO_ENDPOINT_URL",
                                                                                                "http://localhost:9000")})
+        # Create raw_games view if it doesn't exist
+        duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
+        if "raw_games" not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
+            duckdb_conn.sql("CREATE VIEW raw_games AS SELECT * FROM read_parquet('s3://raw/games/steam_games_*.parquet')")
+            logging.info("Created raw_games view")
+        else:
+            logging.info("raw_games view already exists. Skipping creation.")
+        duckdb_conn.close()

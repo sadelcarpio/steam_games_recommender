@@ -53,7 +53,7 @@ x-airflow-common:
 #  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.0.4}
   build:
     context: ../..
-    dockerfile: Dockerfile.airflow
+    dockerfile: infra/local/Dockerfile.airflow
   environment:
     &airflow-common-env
     DATA_DIR: ${PWD}/../../data  # with respect to infra/local folder
@@ -83,10 +83,12 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ${AIRFLOW_PROJ_DIR:-.}/../scraping:/opt/airflow/scraping/
+    - ${AIRFLOW_PROJ_DIR:-.}/../dbt:/opt/airflow/dbt/
+    - ${AIRFLOW_PROJ_DIR:-.}/../data/steam.duckdb:/opt/airflow/data/steam.duckdb
+    - exclude:/opt/airflow/scraping/.venv
+    - exclude:/opt/airflow/dbt/.venv
   user: "${AIRFLOW_UID:-50000}:0"
-  group_add:
-    - ${DOCKER_GROUP_ID}
   depends_on:
     &airflow-common-depends-on
     redis:
@@ -342,6 +344,7 @@ services:
 
 volumes:
   postgres-db-volume:
+  exclude:
 
 networks:
   default:

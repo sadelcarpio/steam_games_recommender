@@ -16,7 +16,7 @@ WITH cumulative AS (
              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
        )
        AS num_positive_reviews,
-       SUM(NOT voted_up::int) OVER (
+       SUM((NOT voted_up)::int) OVER (
              PARTITION BY game_index ORDER BY DATE(timestamp_created)
              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
        )

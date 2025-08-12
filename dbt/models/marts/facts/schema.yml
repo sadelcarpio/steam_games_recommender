@@ -8,15 +8,18 @@ models:
         description: Unique identifier of review
         tests:
           - not_null
+          - unique
       - name: user_index
         description: Incremental index assigned to each user in order of appearance
         tests:
+          - not_null
           - relationships:
               to: ref('dim_users')
               field: user_index
       - name: game_index
         description: Incremental index assigned to each game in order of appearance
         tests:
+          - not_null
           - relationships:
               to: ref('dim_games')
               field: game_index
@@ -26,6 +29,8 @@ models:
         description: Whether review was written during game early access period
       - name: voted_up
         description: Whether review is positive (1) or negative (0)
+        tests:
+          - not_null
       - name: weighted_vote_score
         description: Importance of review
       - name: votes_up
@@ -38,3 +43,5 @@ models:
           - not_null
       - name: scrape_date
         description: Date on which the review was scraped
+        tests:
+          - not_null

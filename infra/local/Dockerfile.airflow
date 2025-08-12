@@ -1,5 +1,7 @@
 FROM apache/airflow:3.0.4
 
+RUN pip install --no-cache-dir duckdb
+
 USER root
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 

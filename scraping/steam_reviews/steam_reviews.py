@@ -1,3 +1,5 @@
+import logging
+
 import os
 
 import duckdb
@@ -12,6 +14,7 @@ from utils.steam_api import get_app_reviews
 
 class ReviewProcessor:
     def __init__(self, db_client: firestore.Client, batch_size: int = 100_000):
+        self.logger = logging.getLogger(__name__ + ".ReviewProcessor")
         self.db = db_client
         self.collection_ref = db_client.collection("games")
         self.batch_size = batch_size
@@ -47,7 +50,7 @@ class ReviewProcessor:
 
     def load_latest_timestamps_cache(self) -> None:
         """Load all timestamps in a single batch operation"""
-        print("Loading latest timestamps cache from Firestore...")
+        self.logger.info("Loading latest timestamps cache from Firestore...")
         docs = self.collection_ref.stream()
         for doc in docs:
             data = doc.to_dict()
@@ -55,7 +58,7 @@ class ReviewProcessor:
             latest_ts = data.get("latest_timestamp")
             if latest_ts:
                 self._timestamp_cache[game_id] = latest_ts
-        print(f"Loaded {len(self._timestamp_cache)} timestamps from cache")
+        self.logger.info(f"Loaded {len(self._timestamp_cache)} timestamps from cache")
 
     def get_latest_timestamp(self, appid: str) -> Optional[datetime]:
         """Get latest timestamp from cache"""
@@ -71,7 +74,7 @@ class ReviewProcessor:
         if not self._timestamp_updates:
             return
 
-        print(f"Flushing {len(self._timestamp_updates)} timestamp updates to Firestore...")
+        self.logger.info(f"Flushing {len(self._timestamp_updates)} timestamp updates to Firestore...")
         batch = self.db.batch()
 
         for appid, timestamp in self._timestamp_updates.items():
@@ -80,7 +83,7 @@ class ReviewProcessor:
 
         batch.commit()
         self._timestamp_updates.clear()
-        print("Timestamp updates flushed successfully")
+        self.logger.info("Timestamp updates flushed successfully")
 
     def create_review_record(self, review: dict, appid: int) -> dict:
         """Create a review record from Steam API response"""
@@ -125,21 +128,21 @@ class ReviewProcessor:
         try:
             data = self._fetch_reviews_with_retry(app_id=appid_str, cursor="*")
         except Exception as e:
-            print(f"Error fetching initial reviews for app {appid}: {e}")
+            self.logger.error(f"Error fetching initial reviews for app {appid}: {e}")
             return [], False
 
         if not data.get("reviews"):
-            print(f"No reviews found for app {appid} ({app_name})")
+            self.logger.warning(f"No reviews found for app {appid} ({app_name})")
             return [], False
 
         latest_review_timestamp = datetime.fromtimestamp(data["reviews"][0]["timestamp_created"], UTC)
 
         # Check if we have new reviews
         if cached_timestamp and latest_review_timestamp <= cached_timestamp:
-            print(f"Skipping app {appid} ({app_name}) - no new reviews since {cached_timestamp}")
+            self.logger.info(f"Skipping app {appid} ({app_name}) - no new reviews since {cached_timestamp}")
             return [], False
 
-        print(f"Processing new reviews for app {appid} ({app_name})")
+        self.logger.info(f"Processing new reviews for app {appid} ({app_name})")
 
         # Process reviews from first batch
         new_reviews = self._process_reviews_batch(data["reviews"], appid, cached_timestamp)
@@ -221,7 +224,14 @@ class ReviewProcessor:
                 time.sleep(10 * (attempt + 1))  # Exponential backoff
 
 
+
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
     os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
     db = firestore.Client(project="steam-games-recommender")
     processor = ReviewProcessor(db, batch_size=1000)
@@ -250,11 +260,11 @@ def main():
                     pl.DataFrame(app_reviews, infer_schema_length=None)
                 ], how='vertical')
                 processed_count += len(app_reviews)
-                print(f"Added {len(app_reviews)} reviews for app {appid}. Total: {processed_count}")
+                logging.info(f"Added {len(app_reviews)} reviews for app {appid}. Total: {processed_count}")
 
             # Batch write reviews and flush timestamp updates
             if len(reviews) >= processor.batch_size:
-                print(f"Writing batch {batch_num} with {len(reviews)} reviews...")
+                logging.info(f"Writing batch {batch_num} with {len(reviews)} reviews...")
                 scrape_date = datetime.now(UTC).date()
                 reviews.write_parquet(f"s3://raw/reviews/steam_reviews_{scrape_date}_{batch_num}.parquet",
                                       storage_options={"aws_access_key_id": 'minioadmin',
@@ -269,7 +279,7 @@ def main():
                 processed_count = 0
 
         except Exception as e:
-            print(f"Error processing app {appid}: {e}")
+            logging.error(f"Error processing app {appid}: {e}")
             # Flush any pending updates before continuing
             processor.flush_timestamp_updates()
             continue
@@ -280,8 +290,15 @@ def main():
 
     # Final flush of any remaining timestamp updates
     processor.flush_timestamp_updates()
-    print("Processing completed successfully!")
-
+    logging.info("Processing completed successfully!")
 
 if __name__ == "__main__":
     main()
+    # Create raw_reviews view if it doesn't exist
+    duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
+    if "raw_reviews" not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
+        duckdb_conn.sql("CREATE VIEW raw_reviews AS SELECT * FROM read_parquet('s3://raw/reviews/steam_reviews_*.parquet')")
+        logging.info("Created raw_games view")
+    else:
+        logging.info("raw_games view already exists. Skipping creation.")
+    duckdb_conn.close()

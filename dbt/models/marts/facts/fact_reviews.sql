@@ -1,9 +1,4 @@
 -- models/marts/facts/fact_reviews.sql
-{#{{ config(#}
-{#    materialized='external',#}
-{#    location='../data/marts/review_features.parquet',#}
-{#    format='parquet'#}
-{#) }}#}
 {{ config(
     materialized='incremental',
     unique_key='review_id'
