@@ -3,9 +3,7 @@ from datetime import datetime, timedelta
 
 import docker
 from airflow import DAG
-from airflow.decorators import task
 from airflow.providers.docker.operators.docker import DockerOperator
-from airflow.providers.standard.sensors.filesystem import FileSensor
 from airflow.sdk import BaseSensorOperator
 from docker.types import Mount
 

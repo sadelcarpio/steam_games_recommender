@@ -4,7 +4,12 @@
         tags=['scraping']
     )
  }}
-SELECT all_appids.appid FROM {{ source('raw', 'app_ids') }} all_appids
-LEFT JOIN {{ ref('stg_games') }} games
-ON all_appids.appid = games.game_id
-WHERE games.game_id IS NULL
+SELECT appid FROM {{ source('raw', 'app_ids') }} a
+WHERE NOT EXISTS(
+    SELECT 1 FROM {{ ref('stg_games') }} g
+             WHERE g.game_id = a.appid
+)
+AND NOT EXISTS(
+    SELECT 1 FROM {{ ref('non_game_ids') }} ng
+             WHERE ng.appid = a.appid
+)
