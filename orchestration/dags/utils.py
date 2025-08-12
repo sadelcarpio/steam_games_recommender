@@ -1,6 +1,3 @@
-import duckdb
-
-
 def should_skip_antijoin(table, ctx):
     import duckdb
     duckdb_conn = duckdb.connect('data/steam.duckdb', read_only=True)
