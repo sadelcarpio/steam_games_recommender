@@ -1,0 +1,18 @@
+FROM apache/airflow:3.0.4
+
+USER root
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+RUN mkdir -p /opt/airflow/dbt && chown -R airflow:0 /opt/airflow/dbt
+COPY --chown=airflow:0 dbt/pyproject.toml /opt/airflow/dbt/pyproject.toml
+COPY --chown=airflow:0 dbt/uv.lock /opt/airflow/dbt/uv.lock
+
+RUN mkdir -p /opt/airflow/scraping && chown -R airflow:0 /opt/airflow/scraping
+COPY --chown=airflow:0 scraping/pyproject.toml /opt/airflow/scraping/pyproject.toml
+COPY --chown=airflow:0 scraping/uv.lock /opt/airflow/scraping/uv.lock
+
+USER airflow
+RUN cd /opt/airflow/dbt && VIRTUAL_ENV= uv sync --locked
+RUN cd /opt/airflow/scraping && VIRTUAL_ENV= uv sync --locked --group duckdb
+
+WORKDIR /opt/airflow
