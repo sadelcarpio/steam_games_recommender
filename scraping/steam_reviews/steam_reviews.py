@@ -213,7 +213,6 @@ class ReviewProcessor:
         for attempt in range(max_retries):
             try:
                 return get_app_reviews(
-                    "https://store.steampowered.com/appreviews",
                     appid=app_id,
                     filt="recent",
                     cursor=cursor

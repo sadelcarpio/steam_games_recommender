@@ -2,17 +2,22 @@ import polars as pl
 import requests
 
 
-def get_app_data(url: str, appid: str):
-    response = requests.get(url, params={"appids": appid, "l": "english"})
+def get_app_data(appid: str):
+    response = requests.get("https://store.steampowered.com/api/appdetails", params={"appids": appid, "l": "english"})
     response.raise_for_status()
     return response.json()
 
 
-def get_app_reviews(url: str, appid: str, filt: str, cursor: str = "*"):
-    response = requests.get(f"{url}/{appid}",
-                            params={"json": "1", "filter": filt, "cursor": cursor, "num_per_page": "100"})
+def get_app_reviews(appid: str, filt: str, cursor: str = "*"):
+    response = requests.get(f"https://store.steampowered.com/appreviews/{appid}",
+                            params={"json": "1",
+                                    "filter": filt,
+                                    "language": "all",
+                                    "cursor": cursor,
+                                    "num_per_page": "100"})
     response.raise_for_status()
     return response.json()
+
 
 def download_all_steam_games():
     url = "https://api.steampowered.com/ISteamApps/GetAppList/v0002?skip_unvetted_apps=false"

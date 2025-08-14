@@ -72,9 +72,8 @@ if __name__ == "__main__":
             for tries in range(10):
                 try:
                     time.sleep(1.6)
-                    data = get_app_data("https://store.steampowered.com/api/appdetails", appid)
-                    game_reviews_data = get_app_reviews("https://store.steampowered.com/appreviews", appid=appid,
-                                                        filt="recent")
+                    data = get_app_data(appid)
+                    game_reviews_data = get_app_reviews(appid=appid, filt="recent")
                 except Exception:
                     logging.warning(f"Quota limit reached for executor. {appid}. Left in row {i}")
                     time.sleep(10)

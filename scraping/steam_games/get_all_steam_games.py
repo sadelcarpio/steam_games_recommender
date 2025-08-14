@@ -25,4 +25,3 @@ if __name__ == "__main__":
     else:
         logging.info("app_ids view already exists. Skipping creation.")
     duckdb_conn.close()
-
