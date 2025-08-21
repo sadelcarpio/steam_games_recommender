@@ -37,11 +37,13 @@ services:
       - "8080:8080"
       - "8081:8081"
     volumes:
-      - ../../data/firestore:/data
+      - ../../data:/data
       - ../../scraping/firebase.json:/workspace/firebase.json
       - ../../scraping/firestore.rules:/workspace/firestore.rules
       - ../../scraping/.firebaserc:/workspace/.firebaserc
+    stop_signal: SIGINT
     stop_grace_period: 60s  # give time to export before shutting down container
+    init: true
 
 networks:
   default:

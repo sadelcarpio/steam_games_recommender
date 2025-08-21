@@ -1,4 +1,5 @@
 firestore/
 minio/
 *.duckdb
+backup/
 .idea/

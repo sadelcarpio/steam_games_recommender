@@ -182,7 +182,7 @@ class ReviewProcessor:
             try:
                 data = self._fetch_reviews_with_retry(app_id=str(appid), cursor=cursor)
             except Exception as e:
-                print(f"Error on iteration {i} for app {appid}: {e}")
+                logging.error(f"Error on iteration {i} for app {appid}: {e}")
                 time.sleep(10)
                 continue
 
@@ -218,6 +218,7 @@ class ReviewProcessor:
                     cursor=cursor
                 )
             except Exception as e:
+                logging.warning(f"Error fetching reviews for app {app_id}: {e}. Retrying...")
                 if attempt == max_retries - 1:
                     raise
                 time.sleep(10 * (attempt + 1))  # Exponential backoff
@@ -233,19 +234,26 @@ def main():
     scrape_date = datetime.now(UTC).date()
     os.environ["FIRESTORE_EMULATOR_HOST"] = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
     db = firestore.Client(project="steam-games-recommender")
-    processor = ReviewProcessor(db, batch_size=1000)
+    processor = ReviewProcessor(db, batch_size=100_000)
     processor.load_latest_timestamps_cache()  # Single read operation
 
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
-    recommended_games = duckdb_conn.sql("SELECT appid FROM stg_games").pl()
+    duckdb_conn.sql("""SET s3_region='us-east-1';
+                    SET s3_url_style='path';
+                    SET s3_use_ssl=false;
+                    SET s3_endpoint='localhost:9000';
+                    SET s3_access_key_id='';
+                    SET s3_secret_access_key='';""")
+    recommended_games = duckdb_conn.sql("SELECT game_id, game_name FROM stg_games").pl()
+    duckdb_conn.close()
     reviews = pl.DataFrame(infer_schema_length=None, schema=processor.schema)
 
     batch_num = 0
     processed_count = 0
 
     for item, game in enumerate(recommended_games.iter_rows(named=True)):
-        appid = game["appid"]
-        app_name = game["name"]
+        appid = game["game_id"]
+        app_name = game["game_name"]
 
         try:
             app_reviews, has_new_reviews = processor.fetch_reviews_for_app(appid, app_name)
@@ -304,6 +312,12 @@ if __name__ == "__main__":
     # Create raw_reviews view if it doesn't exist
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
     if "raw_reviews" not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
+        duckdb_conn.sql("""SET s3_region='us-east-1';
+                                SET s3_url_style='path';
+                                SET s3_use_ssl=false;
+                                SET s3_endpoint='localhost:9000';
+                                SET s3_access_key_id='';
+                                SET s3_secret_access_key='';""")
         duckdb_conn.sql(
             "CREATE VIEW raw_reviews AS SELECT * FROM read_parquet('s3://raw/reviews/steam_reviews_*.parquet')")
         logging.info("Created raw_games view")

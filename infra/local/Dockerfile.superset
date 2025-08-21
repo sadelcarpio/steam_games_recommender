@@ -1,0 +1,4 @@
+FROM apache/superset:master
+USER root
+RUN pip install --no-cache-dir duckdb duckdb-engine
+USER superset

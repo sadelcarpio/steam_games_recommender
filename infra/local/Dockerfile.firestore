@@ -4,4 +4,4 @@ RUN apt-get update && apt-get install -y openjdk-17-jre-headless && apt-get clea
 # Install Firebase CLI
 RUN npm install -g firebase-tools
 WORKDIR /workspace
-ENTRYPOINT ["firebase", "emulators:start", "--only", "firestore", "--import=/data", "--export-on-exit=/data", "--project=steam-games-recommender"]
+ENTRYPOINT ["firebase", "emulators:start", "--only", "firestore", "--import=/data/firestore", "--export-on-exit=/data/firestore", "--project=steam-games-recommender"]
