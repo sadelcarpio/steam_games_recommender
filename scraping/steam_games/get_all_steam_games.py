@@ -20,5 +20,5 @@ if __name__ == "__main__":
     logging.info(f"Wrote {len(df)} rows to s3://raw/games/steam_ids.parquet")
     # Create app_ids view if it doesn't exist
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-    create_view_if_not_exists(duckdb_conn, "app_ids")
+    create_view_if_not_exists(duckdb_conn, "app_ids", "s3://raw/games/steam_ids.parquet")
     duckdb_conn.close()

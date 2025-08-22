@@ -178,5 +178,5 @@ if __name__ == "__main__":
                                                                                                "http://localhost:9000")})
         # Create raw_games view if it doesn't exist
         duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-        create_view_if_not_exists(duckdb_conn, "raw_games")
+        create_view_if_not_exists(duckdb_conn, "raw_games", "s3://raw/games/steam_games_*.parquet")
         duckdb_conn.close()

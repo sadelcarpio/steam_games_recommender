@@ -315,5 +315,5 @@ if __name__ == "__main__":
     main()
     # Create raw_reviews view if it doesn't exist
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-    create_view_if_not_exists(duckdb_conn, "raw_reviews")
+    create_view_if_not_exists(duckdb_conn, "raw_reviews", "s3://raw/reviews/steam_reviews_*.parquet",)
     duckdb_conn.close()
