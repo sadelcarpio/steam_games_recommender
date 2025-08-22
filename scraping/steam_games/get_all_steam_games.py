@@ -3,6 +3,7 @@ import logging
 import os
 
 from utils.steam_api import download_all_steam_games
+from utils.views import create_view_if_not_exists
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -19,15 +20,5 @@ if __name__ == "__main__":
     logging.info(f"Wrote {len(df)} rows to s3://raw/games/steam_ids.parquet")
     # Create app_ids view if it doesn't exist
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-    if "app_ids" not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
-        duckdb_conn.sql("""SET s3_region='us-east-1';
-                        SET s3_url_style='path';
-                        SET s3_use_ssl=false;
-                        SET s3_endpoint='localhost:9000';
-                        SET s3_access_key_id='';
-                        SET s3_secret_access_key='';""")
-        duckdb_conn.sql("CREATE VIEW app_ids AS SELECT * FROM read_parquet('s3://raw/games/steam_ids.parquet')")
-        logging.info("Created app_ids view")
-    else:
-        logging.info("app_ids view already exists. Skipping creation.")
+    create_view_if_not_exists(duckdb_conn, "app_ids")
     duckdb_conn.close()

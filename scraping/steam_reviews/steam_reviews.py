@@ -10,6 +10,7 @@ import polars as pl
 from google.cloud import firestore
 
 from utils.steam_api import get_app_reviews
+from utils.views import create_view_if_not_exists
 
 
 class ReviewProcessor:
@@ -126,6 +127,7 @@ class ReviewProcessor:
 
         # Get first batch to check if there are new reviews
         try:
+            self.logger.info(f"Fetching initial reviews for app {appid} ({app_name})")
             data = self._fetch_reviews_with_retry(app_id=appid_str, cursor="*")
         except Exception as e:
             self.logger.error(f"Error fetching initial reviews for app {appid}: {e}")
@@ -180,6 +182,7 @@ class ReviewProcessor:
 
         for i in range(1, total_iter):
             try:
+                self.logger.info(f"Fetching reviews for app {appid} - iteration {i}/{total_iter}")
                 data = self._fetch_reviews_with_retry(app_id=str(appid), cursor=cursor)
             except Exception as e:
                 logging.error(f"Error on iteration {i} for app {appid}: {e}")
@@ -256,6 +259,7 @@ def main():
         app_name = game["game_name"]
 
         try:
+            logging.info(f"Processing app ({item + 1}/{len(recommended_games)}) ...")
             app_reviews, has_new_reviews = processor.fetch_reviews_for_app(appid, app_name)
 
             if not has_new_reviews:
@@ -311,16 +315,5 @@ if __name__ == "__main__":
     main()
     # Create raw_reviews view if it doesn't exist
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-    if "raw_reviews" not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
-        duckdb_conn.sql("""SET s3_region='us-east-1';
-                                SET s3_url_style='path';
-                                SET s3_use_ssl=false;
-                                SET s3_endpoint='localhost:9000';
-                                SET s3_access_key_id='';
-                                SET s3_secret_access_key='';""")
-        duckdb_conn.sql(
-            "CREATE VIEW raw_reviews AS SELECT * FROM read_parquet('s3://raw/reviews/steam_reviews_*.parquet')")
-        logging.info("Created raw_games view")
-    else:
-        logging.info("raw_games view already exists. Skipping creation.")
+    create_view_if_not_exists(duckdb_conn, "raw_reviews")
     duckdb_conn.close()

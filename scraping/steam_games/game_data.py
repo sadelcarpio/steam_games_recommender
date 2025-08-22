@@ -9,6 +9,7 @@ from datetime import datetime, UTC
 import duckdb
 import polars as pl
 from utils.steam_api import get_app_data, get_app_reviews, download_all_steam_games
+from utils.views import create_view_if_not_exists
 
 
 def create_apps_features_df() -> pl.DataFrame:
@@ -177,15 +178,5 @@ if __name__ == "__main__":
                                                                                                "http://localhost:9000")})
         # Create raw_games view if it doesn't exist
         duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-        if "raw_games" not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):
-            duckdb_conn.sql("""SET s3_region='us-east-1';
-                                    SET s3_url_style='path';
-                                    SET s3_use_ssl=false;
-                                    SET s3_endpoint='localhost:9000';
-                                    SET s3_access_key_id='';
-                                    SET s3_secret_access_key='';""")
-            duckdb_conn.sql("CREATE VIEW raw_games AS SELECT * FROM read_parquet('s3://raw/games/steam_games_*.parquet')")
-            logging.info("Created raw_games view")
-        else:
-            logging.info("raw_games view already exists. Skipping creation.")
+        create_view_if_not_exists(duckdb_conn, "raw_games")
         duckdb_conn.close()
