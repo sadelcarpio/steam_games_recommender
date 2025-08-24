@@ -55,7 +55,6 @@ if __name__ == "__main__":
     batch_size = 10_000
     processed_count = 0
     batch_num = 0
-    scrape_date = datetime.now(UTC).date()
     try:
         df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
     except duckdb.CatalogException:
@@ -144,7 +143,8 @@ if __name__ == "__main__":
                     "dlc": app_info.get("dlc", []),
                     "review_score": game_reviews_data["query_summary"].get("review_score", None),
                     "review_score_desc": game_reviews_data["query_summary"].get("review_score_desc", None),
-                    "scrape_date": scrape_date
+                    "scrape_date": datetime.now(UTC).date()
+
                 }
 
                 logging.info(f"Finished processing element #{appid} in iteration #{i} / {total_apps}")
@@ -155,7 +155,7 @@ if __name__ == "__main__":
                 ], how='vertical')
                 if processed_count >= batch_size:
                     logging.info(f"Writing batch {batch_num}")
-                    apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
+                    apps_features_df.write_parquet(f"s3://raw/games/steam_games_{datetime.now(UTC).date()}_{batch_num}.parquet",
                                                    storage_options={"aws_access_key_id": 'minioadmin',
                                                                     "aws_secret_access_key": 'minioadmin',
                                                                     "aws_region": "us-east-1",
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     finally:
         if len(apps_features_df) > 0:
             logging.info(f"Writing final batch {batch_num}")
-            apps_features_df.write_parquet(f"s3://raw/games/steam_games_{scrape_date}_{batch_num}.parquet",
+            apps_features_df.write_parquet(f"s3://raw/games/steam_games_{datetime.now(UTC).date()}_{batch_num}.parquet",
                                            storage_options={"aws_access_key_id": 'minioadmin',
                                                             "aws_secret_access_key": 'minioadmin',
                                                             "aws_region": "us-east-1",
