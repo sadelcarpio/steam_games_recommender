@@ -3,7 +3,7 @@ from functools import partial
 
 from airflow.sdk import task, dag
 from airflow.utils.trigger_rule import TriggerRule
-from utils import should_skip_antijoin
+from utils import table_exists
 
 
 default_args = {
@@ -23,7 +23,7 @@ def games_etl_pipeline():
     def get_all_candidate_ids():
         return "uv run python -m steam_games.get_all_steam_games"
 
-    @task.skip_if(partial(should_skip_antijoin, "raw_games"))
+    @task.skip_if(partial(table_exists, "raw_games"))
     @task.bash(cwd='/opt/airflow/dbt', env={"MINIO_ENDPOINT": "minio:9000"})
     def run_dbt_antijoin():
         return "uv run dbt run --select tag:scraping"
@@ -36,7 +36,7 @@ def games_etl_pipeline():
     def start_game_scraping():
         return "uv run python -m steam_games.game_data"
 
-    @task.skip_if(partial(should_skip_antijoin, "raw_reviews"))
+    @task.skip_if(partial(table_exists, "raw_reviews"))
     @task.bash(cwd='/opt/airflow/dbt', env={"MINIO_ENDPOINT": "minio:9000"})
     def run_dbt_models():
         return "uv run dbt run --exclude tag:scraping"

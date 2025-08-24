@@ -3,7 +3,7 @@ from functools import partial
 
 from airflow.sdk import task, dag
 
-from utils import should_skip_antijoin
+from utils import table_exists
 
 default_args = {
     'owner': 'etl',
@@ -19,7 +19,7 @@ default_args = {
      catchup=False)
 def reviews_etl_pipeline():
 
-    @task.skip_if(partial(should_skip_antijoin, "raw_games"))
+    @task.skip_if(partial(table_exists, "raw_games"))
     @task.bash(
         cwd='/opt/airflow/scraping',
         env={"FIRESTORE_EMULATOR_HOST": "firestore-emulator:8080", "MINIO_ENDPOINT_URL": "http://minio:9000"}
