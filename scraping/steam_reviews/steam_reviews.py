@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import logging
 
 import os
@@ -12,6 +14,24 @@ from google.cloud import firestore
 from utils.steam_api import get_app_reviews
 from utils.views import create_view_if_not_exists
 
+
+@dataclass(frozen=True, slots=True)
+class App:
+    app_id: str
+    name: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "App":
+        return cls(
+            app_id=str(data["appid"]),
+            name=data.get("name")
+        )
+
+    def __str__(self):
+        return f"{self.app_id} ({self.name})"
+
+    def __repr__(self):
+        return f"App(app_id={self.app_id}, name={self.name})"
 
 class ReviewProcessor:
     def __init__(self, db_client: firestore.Client, batch_size: int = 100_000):
@@ -86,13 +106,13 @@ class ReviewProcessor:
         self._timestamp_updates.clear()
         self.logger.info("Timestamp updates flushed successfully")
 
-    def create_review_record(self, review: dict, appid: int) -> dict:
+    def create_review_record(self, review: dict, appid: str) -> dict:
         """Create a review record from Steam API response"""
         author = review["author"]
         return {
             "rec_id": int(review["recommendationid"]),
             "author_id": int(author["steamid"]),
-            "appid": appid,
+            "appid": int(appid),
             "playtime_forever": int(author["playtime_forever"]) if author.get("playtime_forever") else None,
             "playtime_last_two_weeks": int(author["playtime_last_two_weeks"]) if author.get(
                 "playtime_last_two_weeks") else None,
@@ -116,52 +136,53 @@ class ReviewProcessor:
             "scrape_date": datetime.now(UTC).date()
         }
 
-    def fetch_reviews_for_app(self, appid: int, app_name: str) -> Tuple[List[dict], bool]:
+    def fetch_reviews_for_app(self, app: App) -> Tuple[List[dict], bool]:
         """
         Fetch new reviews for a given app.
         Returns (reviews_list, has_new_reviews)
         """
-        appid_str = str(appid)
-        cached_timestamp = self.get_latest_timestamp(appid_str)
+        appid = app.app_id
+        app_name = app.name
+        cached_timestamp = self.get_latest_timestamp(appid)
         user_reviews = []
 
         # Get first batch to check if there are new reviews
         try:
-            self.logger.info(f"Fetching initial reviews for app {appid} ({app_name})")
-            data = self._fetch_reviews_with_retry(app_id=appid_str, cursor="*")
+            self.logger.info(f"Fetching initial reviews for app {app}")
+            data = self._fetch_reviews_with_retry(app=app, cursor="*")
         except Exception as e:
             self.logger.error(f"Error fetching initial reviews for app {appid}: {e}")
             return [], False
 
         if not data.get("reviews"):
-            self.logger.warning(f"No reviews found for app {appid} ({app_name})")
+            self.logger.warning(f"No reviews found for app {app}")
             return [], False
 
         latest_review_timestamp = datetime.fromtimestamp(data["reviews"][0]["timestamp_created"], UTC)
 
         # Check if we have new reviews
         if cached_timestamp and latest_review_timestamp <= cached_timestamp:
-            self.logger.info(f"Skipping app {appid} ({app_name}) - no new reviews since {cached_timestamp}")
+            self.logger.info(f"Skipping app {app} - no new reviews since {cached_timestamp}")
             return [], False
 
-        self.logger.info(f"Processing new reviews for app {appid} ({app_name})")
+        self.logger.info(f"Processing new reviews for app {app}")
 
         # Process reviews from first batch
         new_reviews = self._process_reviews_batch(data["reviews"], appid, cached_timestamp)
         user_reviews.extend(new_reviews)
 
         # Update latest timestamp in cache (will be flushed later)
-        self.update_latest_timestamp(appid_str, latest_review_timestamp)
+        self.update_latest_timestamp(appid, latest_review_timestamp)
 
         # Continue with pagination if needed
         total_reviews = data.get("query_summary", {}).get("total_reviews", 0)
         if total_reviews > 100:
             cursor = data.get("cursor")
-            user_reviews.extend(self._fetch_remaining_reviews(appid, cursor, cached_timestamp, total_reviews))
+            user_reviews.extend(self._fetch_remaining_reviews(app, cursor, cached_timestamp, total_reviews))
 
         return user_reviews, True
 
-    def _process_reviews_batch(self, reviews: List[dict], appid: int, cutoff_timestamp: Optional[datetime]) -> List[
+    def _process_reviews_batch(self, reviews: List[dict], appid: str, cutoff_timestamp: Optional[datetime]) -> List[
         dict]:
         """Process a batch of reviews, filtering by timestamp"""
         processed_reviews = []
@@ -174,18 +195,20 @@ class ReviewProcessor:
 
         return processed_reviews
 
-    def _fetch_remaining_reviews(self, appid: int, cursor: str,
+    def _fetch_remaining_reviews(self, app: App, cursor: str,
                                  cutoff_timestamp: Optional[datetime], total_reviews: int) -> List[dict]:
         """Fetch remaining reviews using pagination"""
         user_reviews = []
+        appid = app.app_id
         total_iter = total_reviews // 100 + (1 if total_reviews % 100 > 0 else 0)
 
+        self.logger.info(f"Resolved {total_iter} iterations for app {app} (all history)")
         for i in range(1, total_iter):
             try:
-                self.logger.info(f"Fetching reviews for app {appid} - iteration {i}/{total_iter}")
-                data = self._fetch_reviews_with_retry(app_id=str(appid), cursor=cursor)
+                self.logger.info(f"Fetching reviews for app {app} - iteration {i}/{total_iter}")
+                data = self._fetch_reviews_with_retry(app=app, cursor=cursor)
             except Exception as e:
-                logging.error(f"Error on iteration {i} for app {appid}: {e}")
+                logging.error(f"Error on iteration {i} for app {app}: {e}")
                 time.sleep(10)
                 continue
 
@@ -195,6 +218,7 @@ class ReviewProcessor:
             # Check if we've gone past our cutoff
             oldest_in_batch = datetime.fromtimestamp(data["reviews"][-1]["timestamp_created"], UTC)
             if cutoff_timestamp and oldest_in_batch <= cutoff_timestamp:
+                self.logger.info(f"Stopping pagination for app {app}.")
                 # Process only the new reviews in this batch and stop
                 new_reviews = self._process_reviews_batch(data["reviews"], appid, cutoff_timestamp)
                 user_reviews.extend(new_reviews)
@@ -211,17 +235,17 @@ class ReviewProcessor:
         return user_reviews
 
     @staticmethod
-    def _fetch_reviews_with_retry(app_id: str, cursor: str, max_retries: int = 3) -> Optional[dict]:
+    def _fetch_reviews_with_retry(app: App, cursor: str, max_retries: int = 3) -> Optional[dict]:
         """Fetch reviews with retry mechanism"""
         for attempt in range(max_retries):
             try:
                 return get_app_reviews(
-                    appid=app_id,
+                    appid=app.app_id,
                     filt="recent",
                     cursor=cursor
                 )
             except Exception as e:
-                logging.warning(f"Error fetching reviews for app {app_id}: {e}. Retrying...")
+                logging.warning(f"Error fetching reviews for app {app}: {e}. Retrying...")
                 if attempt == max_retries - 1:
                     raise
                 time.sleep(10 * (attempt + 1))  # Exponential backoff
@@ -241,10 +265,10 @@ def main():
     processor.load_latest_timestamps_cache()  # Single read operation
 
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
-    duckdb_conn.sql("""SET s3_region='us-east-1';
+    duckdb_conn.sql(f"""SET s3_region='us-east-1';
                     SET s3_url_style='path';
                     SET s3_use_ssl=false;
-                    SET s3_endpoint='localhost:9000';
+                    SET s3_endpoint='{os.environ.get("MINIO_ENDPOINT_URL", "localhost:9000")}';
                     SET s3_access_key_id='';
                     SET s3_secret_access_key='';""")
     recommended_games = duckdb_conn.sql("SELECT game_id, game_name FROM stg_games").pl()
@@ -255,12 +279,11 @@ def main():
     processed_count = 0
 
     for item, game in enumerate(recommended_games.iter_rows(named=True)):
-        appid = game["game_id"]
-        app_name = game["game_name"]
+        app = App.from_dict(game)
 
         try:
             logging.info(f"Processing app ({item + 1}/{len(recommended_games)}) ...")
-            app_reviews, has_new_reviews = processor.fetch_reviews_for_app(appid, app_name)
+            app_reviews, has_new_reviews = processor.fetch_reviews_for_app(app)
 
             if not has_new_reviews:
                 continue
@@ -271,7 +294,7 @@ def main():
                     pl.DataFrame(app_reviews, infer_schema_length=None)
                 ], how='vertical')
                 processed_count += len(app_reviews)
-                logging.info(f"Added {len(app_reviews)} reviews for app {appid}. Total: {processed_count}")
+                logging.info(f"Added {len(app_reviews)} reviews for app {app.app_id} ({app.name}). Total: {processed_count}")
 
             # Batch write reviews and flush timestamp updates
             if len(reviews) >= processor.batch_size:
@@ -291,7 +314,7 @@ def main():
                 processed_count = 0
 
         except Exception as e:
-            logging.error(f"Error processing app {appid}: {e}")
+            logging.error(f"Error processing app {app.app_id} ({app.name}): {e}")
             # Flush any pending updates before continuing
             processor.flush_timestamp_updates()
             continue
