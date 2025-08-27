@@ -9,7 +9,7 @@ default_args = {
     'owner': 'etl',
     'depends_on_past': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=10)
+    'retry_delay': timedelta(minutes=1)
 }
 
 
