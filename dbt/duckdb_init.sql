@@ -14,5 +14,8 @@ SET s3_secret_access_key='';
 CREATE VIEW raw_games AS
 SELECT * FROM read_parquet('s3://raw/games/steam_games_*.parquet');
 
+CREATE VIEW app_ids AS
+SELECT * FROM read_parquet('s3://raw/games/steam_ids.parquet');
+
 CREATE VIEW raw_reviews AS
 SELECT * FROM read_parquet('s3://raw/reviews/steam_reviews_*.parquet');
