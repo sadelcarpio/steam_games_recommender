@@ -1,11 +1,14 @@
 -- models/marts/facts/fact_reviews.sql
 {{ config(
     materialized='incremental',
-    unique_key='review_id'
+    unique_key='review_id',
+    on_schema_change='append_new_columns'
 ) }}
 SELECT r.review_id,
        u.user_index,
        g.game_index,
+       u.user_id,
+       g.game_id,
        r.review,
        r.written_during_early_access,
        r.voted_up,

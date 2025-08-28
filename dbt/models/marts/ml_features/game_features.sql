@@ -4,7 +4,7 @@
 ) }}
 SELECT g.*,
        a.game_review_day,
-       a.game_num_reviews
+       a.game_num_reviews,
        a.game_num_positive_reviews,
        a.game_num_negative_reviews,
        a.game_weighted_score
