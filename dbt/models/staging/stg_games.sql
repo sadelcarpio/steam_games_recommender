@@ -16,7 +16,9 @@ SELECT appid                          AS game_id,
                TRY_STRPTIME(release_date, '%b %d, %Y'),
                TRY_STRPTIME(release_date, '%d %b, %Y')
        )                              AS game_release_date,
+       about_the_game                 AS game_about,
        short_description              AS game_short_description,
+       detailed_description           AS game_detailed_description,
        review_score                   AS game_review_score,
        review_score_desc              AS game_review_score_description,
        scrape_date                    AS game_scrape_date

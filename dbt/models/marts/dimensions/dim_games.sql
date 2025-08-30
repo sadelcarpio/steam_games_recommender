@@ -23,12 +23,14 @@ WITH first_review AS (SELECT game_id,
                                   ELSE COALESCE(g.game_release_date, first_review.first_review_date)
                                   END                                                       AS game_prerelease_date,
                               g.game_short_description,
+                              g.game_about,
+                              g.game_detailed_description,
                               g.game_scrape_date,
                               g.game_review_score,
                               g.game_review_score_description
                        FROM {{ ref('int_deduplicated_games') }} g
                                 LEFT JOIN first_review
                                           USING (game_id))
-SELECT ROW_NUMBER() OVER (ORDER BY game_prerelease_date NULLS LAST) - 1 AS game_index, *
+SELECT ROW_NUMBER() OVER (ORDER BY game_prerelease_date NULLS LAST, game_id) - 1 AS game_index, *
 FROM games_imputed
 WHERE game_release_date IS NOT NULL
