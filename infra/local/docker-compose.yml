@@ -27,7 +27,7 @@ services:
       exit 0;
       "
 
-  firestore-emulator:
+  firestore-emulator:  # TODO: Replace with MongoDB / Postgres db (to store also serving data)
     build:
       context: .
       dockerfile: Dockerfile.firestore
