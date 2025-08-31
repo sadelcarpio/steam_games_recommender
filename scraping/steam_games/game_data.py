@@ -8,6 +8,8 @@ from datetime import datetime, UTC
 
 import duckdb
 import polars as pl
+
+from utils.text_cleaning import clean_and_extract_text
 from utils.steam_api import get_app_data, get_app_reviews, download_all_steam_games
 from utils.views import create_view_if_not_exists
 
@@ -124,8 +126,8 @@ if __name__ == "__main__":
                     "minimum_pc_requirements": minimum_pc_requirements,
                     "recommended_pc_requirements": recommended_pc_requirements,
                     "controller_support": app_info.get("controller_support", None),
-                    "detailed_description": app_info["detailed_description"],
-                    "about_the_game": app_info["about_the_game"],
+                    "detailed_description": clean_and_extract_text(app_info["detailed_description"]),
+                    "about_the_game": clean_and_extract_text(app_info["about_the_game"]),
                     "short_description": app_info["short_description"],
                     "supported_languages": languages,
                     "header_image": app_info.get("header_image", None),
@@ -155,12 +157,13 @@ if __name__ == "__main__":
                 ], how='vertical')
                 if processed_count >= batch_size:
                     logging.info(f"Writing batch {batch_num}")
-                    apps_features_df.write_parquet(f"s3://raw/games/steam_games_{datetime.now(UTC).date()}_{batch_num}.parquet",
-                                                   storage_options={"aws_access_key_id": 'minioadmin',
-                                                                    "aws_secret_access_key": 'minioadmin',
-                                                                    "aws_region": "us-east-1",
-                                                                    "aws_endpoint_url": os.environ.get(
-                                                                        "MINIO_ENDPOINT_URL", "http://localhost:9000")})
+                    apps_features_df.write_parquet(
+                        f"s3://raw/games/steam_games_{datetime.now(UTC).date()}_{batch_num}.parquet",
+                        storage_options={"aws_access_key_id": 'minioadmin',
+                                         "aws_secret_access_key": 'minioadmin',
+                                         "aws_region": "us-east-1",
+                                         "aws_endpoint_url": os.environ.get(
+                                             "MINIO_ENDPOINT_URL", "http://localhost:9000")})
                     # Reset for next batch
                     apps_features_df = create_apps_features_df()
                     batch_num += 1
