@@ -4,11 +4,48 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
-
+dependencies = [
+]
 [dependency-groups]
-dbt = [
-    "dbt-duckdb>=1.9.3",
+duckdb = [
+    "duckdb>=1.3.2"
+]
+bigquery = [
+    "google-cloud-bigquery>=3.36.0"
+]
+scraping-base = [
+    "bs4>=0.0.2",
+    "google-cloud-firestore>=2.21.0",
+    "polars>=1.30.0",
+    "requests>=2.32.4",
+    "pyarrow>=21.0.0",
+]
+orchestration-base = [
+    "apache-airflow==3.0.4"
+]
+dbt-duckdb = [
+    { include-group = "duckdb" },
+    "dbt-duckdb>=1.9.3"
+]
+dbt-bigquery = [
+    { include-group = "bigquery"},
+    "dbt-bigquery>=1.10.1"
+]
+scraping-duckdb = [
+    { include-group = "scraping-base" },
+    { include-group = "duckdb" }
+]
+scraping-bigquery = [
+    { include-group = "scraping-base" },
+    { include-group = "bigquery" }
+]
+orchestration-duckdb = [
+    { include-group = "orchestration-base" },
+    { include-group = "duckdb" }
+]
+orchestration-bigquery = [
+    { include-group = "orchestration-base" },
+    { include-group = "bigquery" }
 ]
 notebooks = [
     "duckdb>=1.3.2",
@@ -26,15 +63,4 @@ notebooks = [
     "torch>=2.7.1",
     "torchmetrics>=1.0.3",
     "torchrec>=1.2.0",
-]
-scraping = [
-    "bs4>=0.0.2",
-    "google-cloud-firestore>=2.21.0",
-    "polars>=1.30.0",
-    "requests>=2.32.4",
-    "duckdb>=1.3.2",
-    "pyarrow>=21.0.0",
-]
-orchestration = [
-    "apache-airflow==3.0.4"
 ]

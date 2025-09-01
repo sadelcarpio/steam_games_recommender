@@ -13,6 +13,6 @@ RUN mkdir -p /opt/airflow/dbt && chown -R airflow:0 /opt/airflow/dbt
 RUN mkdir -p /opt/airflow/scraping && chown -R airflow:0 /opt/airflow/scraping
 
 USER airflow
-RUN cd /opt/airflow/dbt && VIRTUAL_ENV= uv sync --locked --group dbt --group scraping
+RUN cd /opt/airflow/dbt && VIRTUAL_ENV= uv sync --locked --group dbt-duckdb --group scraping-duckdb
 
 WORKDIR /opt/airflow
