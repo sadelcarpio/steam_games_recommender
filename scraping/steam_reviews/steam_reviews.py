@@ -24,7 +24,7 @@ class DbClient(Protocol):  # Interface for database clients
 
 
 def make_db_client() -> DbClient:  # Factory method for database clients
-    if True:
+    if os.getenv("POSTGRES_HOST"):
         return PostgresDbClient.from_env()
     else:
         return FirestoreDbClient.from_env()
@@ -44,6 +44,9 @@ class PostgresDbClient(DbClient):
         conn_str = os.getenv("POSTGRES_DSN", f"postgresql://{pg_user}:{pg_password}@{host}:{pg_port}/games_scraping")
         conn = psycopg.connect(conn_str)
         return cls(conn=conn)
+
+    def __str__(self):
+        return f"PostgresDbClient(table={self._table})"
 
     def update_latest_timestamps(self, updates: dict[str, datetime]) -> None:
         if not updates:
@@ -72,6 +75,7 @@ class PostgresDbClient(DbClient):
 
 class FirestoreDbClient(DbClient):
     def __init__(self, client: firestore.Client, collection: str = "games"):
+        os.environ["FIRESTORE_EMULATOR_HOST"] = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
         self._client = client
         self._collection = client.collection(collection)
 
@@ -80,6 +84,9 @@ class FirestoreDbClient(DbClient):
         project = os.getenv("FIRESTORE_PROJECT", "steam-games-recommender")
         client = firestore.Client(project)
         return cls(client=client)
+
+    def __str__(self):
+        return f"FirestoreDbClient(collection={self._collection})"
 
     def update_latest_timestamps(self, updates: dict[str, datetime]) -> None:
         batch = self._client.batch()  # changes
@@ -148,7 +155,7 @@ class ReviewProcessor:
             "scrape_date": pl.Date,
         }
 
-        # Cache for latest timestamps - minimize Firestore reads
+        # Cache for latest timestamps - minimize reads
         self._timestamp_cache: Dict[str, datetime] = {}
         self._timestamp_updates: Dict[str, datetime] = {}  # Pending updates
 
@@ -169,11 +176,11 @@ class ReviewProcessor:
         self._timestamp_updates[appid] = timestamp
 
     def flush_timestamp_updates(self) -> None:
-        """Batch update all pending timestamp changes to Firestore"""
+        """Batch update all pending timestamp changes to db"""
         if not self._timestamp_updates:
             return
 
-        self.logger.info(f"Flushing {len(self._timestamp_updates)} timestamp updates to Firestore...")
+        self.logger.info(f"Flushing {len(self._timestamp_updates)} timestamp updates to {self.db}...")
 
         self.db.update_latest_timestamps(self._timestamp_updates)
 
@@ -332,7 +339,6 @@ def main():
     )
 
     scrape_date = datetime.now(UTC).date()
-    os.environ["FIRESTORE_EMULATOR_HOST"] = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
     db = make_db_client()
     processor = ReviewProcessor(db, batch_size=100_000)
     processor.load_latest_timestamps_cache()  # Single read operation
