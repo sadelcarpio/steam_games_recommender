@@ -1,108 +1,15 @@
-from dataclasses import dataclass
-
 import logging
-
 import os
+import time
+from dataclasses import dataclass
+from datetime import datetime, UTC
 
 import duckdb
-import time
-from datetime import datetime, UTC
-from typing import Dict, List, Optional, Tuple
 import polars as pl
-import psycopg
-from google.cloud import firestore
-from typing import Protocol, runtime_checkable
 
+from utils.db import DbClient, make_db_client
 from utils.steam_api import get_app_reviews
 from utils.views import create_view_if_not_exists
-
-
-@runtime_checkable
-class DbClient(Protocol):  # Interface for database clients
-    def load_latest_timestamps(self) -> dict[str, datetime]: ...
-    def update_latest_timestamps(self, updates: dict[str, datetime]) -> None: ...
-
-
-def make_db_client() -> DbClient:  # Factory method for database clients
-    if os.getenv("POSTGRES_HOST"):
-        return PostgresDbClient.from_env()
-    else:
-        return FirestoreDbClient.from_env()
-
-
-class PostgresDbClient(DbClient):
-    def __init__(self, conn: psycopg.Connection, table: str = "games_last_processed_reviews"):
-        self._conn = conn
-        self._table = table
-
-    @classmethod
-    def from_env(cls):
-        host = os.getenv("POSTGRES_HOST", "localhost")
-        pg_user = os.getenv("POSTGRES_USER", "postgres")
-        pg_password = os.getenv("POSTGRES_PASSWORD", "postgres")
-        pg_port = os.getenv("POSTGRES_PORT", "5433")
-        conn_str = os.getenv("POSTGRES_DSN", f"postgresql://{pg_user}:{pg_password}@{host}:{pg_port}/games_scraping")
-        conn = psycopg.connect(conn_str)
-        return cls(conn=conn)
-
-    def __str__(self):
-        return f"PostgresDbClient(table={self._table})"
-
-    def update_latest_timestamps(self, updates: dict[str, datetime]) -> None:
-        if not updates:
-            return
-        sql = f"""
-                    INSERT INTO {self._table} (game_id, last_processed_timestamp)
-                    VALUES (%s, %s)
-                    ON CONFLICT (game_id)
-                    DO UPDATE SET last_processed_timestamp = EXCLUDED.last_processed_timestamp
-                """
-        rows = [(k, v) for k, v in updates.items()]
-        with self._conn.cursor() as cur:
-            cur.executemany(sql, rows)
-        self._conn.commit()
-
-    def load_latest_timestamps(self) -> dict[str, datetime]:
-        sql = f"SELECT game_id, last_processed_timestamp FROM {self._table}"
-        out: Dict[str, datetime] = {}
-        with self._conn.cursor() as cur:
-            cur.execute(sql)
-            for game_id, ts in cur.fetchall():
-                if ts is not None:
-                    out[str(game_id)] = ts.replace(tzinfo=UTC)
-        return out
-
-
-class FirestoreDbClient(DbClient):
-    def __init__(self, client: firestore.Client, collection: str = "games"):
-        os.environ["FIRESTORE_EMULATOR_HOST"] = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
-        self._client = client
-        self._collection = client.collection(collection)
-
-    @classmethod
-    def from_env(cls):
-        project = os.getenv("FIRESTORE_PROJECT", "steam-games-recommender")
-        client = firestore.Client(project)
-        return cls(client=client)
-
-    def __str__(self):
-        return f"FirestoreDbClient(collection={self._collection})"
-
-    def update_latest_timestamps(self, updates: dict[str, datetime]) -> None:
-        batch = self._client.batch()  # changes
-        for appid, timestamp in updates.items():
-            doc_ref = self._collection.document(appid)
-            batch.set(doc_ref, {"latest_timestamp": timestamp}, merge=True)
-        batch.commit()
-
-    def load_latest_timestamps(self) -> dict[str, datetime]:
-        out: dict[str, datetime] = {}
-        for doc in self._collection.stream():
-            data = doc.to_dict() or {}
-            ts = data.get("latest_timestamp")
-            if ts:
-                out[doc.id] = ts
-        return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,8 +63,8 @@ class ReviewProcessor:
         }
 
         # Cache for latest timestamps - minimize reads
-        self._timestamp_cache: Dict[str, datetime] = {}
-        self._timestamp_updates: Dict[str, datetime] = {}  # Pending updates
+        self._timestamp_cache: dict[str, datetime] = {}
+        self._timestamp_updates: dict[str, datetime] = {}  # Pending updates
 
     def load_latest_timestamps_cache(self) -> None:
         """Load all timestamps in a single batch operation"""
@@ -166,7 +73,7 @@ class ReviewProcessor:
         self._timestamp_cache = self.db.load_latest_timestamps()
         self.logger.info(f"Loaded {len(self._timestamp_cache)} timestamps from cache")
 
-    def get_latest_timestamp(self, appid: str) -> Optional[datetime]:
+    def get_latest_timestamp(self, appid: str) -> datetime | None:
         """Get latest timestamp from cache"""
         return self._timestamp_cache.get(appid)
 
@@ -217,7 +124,7 @@ class ReviewProcessor:
             "scrape_date": datetime.now(UTC).date()
         }
 
-    def fetch_reviews_for_app(self, app: App) -> Tuple[List[dict], bool]:
+    def fetch_reviews_for_app(self, app: App) -> tuple[list[dict], bool]:
         """
         Fetch new reviews for a given app.
         Returns (reviews_list, has_new_reviews)
@@ -262,8 +169,7 @@ class ReviewProcessor:
 
         return user_reviews, True
 
-    def _process_reviews_batch(self, reviews: List[dict], appid: str, cutoff_timestamp: Optional[datetime]) -> List[
-        dict]:
+    def _process_reviews_batch(self, reviews: list[dict], appid: str, cutoff_timestamp: datetime | None) -> list[dict]:
         """Process a batch of reviews, filtering by timestamp"""
         processed_reviews = []
         cutoff_ts = int(cutoff_timestamp.timestamp()) if cutoff_timestamp else 0
@@ -276,7 +182,7 @@ class ReviewProcessor:
         return processed_reviews
 
     def _fetch_remaining_reviews(self, app: App, cursor: str,
-                                 cutoff_timestamp: Optional[datetime], total_reviews: int) -> List[dict]:
+                                 cutoff_timestamp: datetime | None, total_reviews: int) -> list[dict]:
         """Fetch remaining reviews using pagination"""
         user_reviews = []
         appid = app.app_id
@@ -315,7 +221,7 @@ class ReviewProcessor:
         return user_reviews
 
     @staticmethod
-    def _fetch_reviews_with_retry(app: App, cursor: str, max_retries: int = 3) -> Optional[dict]:
+    def _fetch_reviews_with_retry(app: App, cursor: str, max_retries: int = 3) -> dict | None:
         """Fetch reviews with retry mechanism"""
         for attempt in range(max_retries):
             try:
@@ -329,6 +235,7 @@ class ReviewProcessor:
                 if attempt == max_retries - 1:
                     raise
                 time.sleep(10 * (attempt + 1))  # Exponential backoff
+        return dict()
 
 
 def main():
@@ -373,7 +280,8 @@ def main():
                     pl.DataFrame(app_reviews, infer_schema_length=None)
                 ], how='vertical')
                 processed_count += len(app_reviews)
-                logging.info(f"Added {len(app_reviews)} reviews for app {app.app_id} ({app.name}). Total: {processed_count}")
+                logging.info(
+                    f"Added {len(app_reviews)} reviews for app {app.app_id} ({app.name}). Total: {processed_count}")
 
             # Batch write reviews and flush timestamp updates
             if len(reviews) >= processor.batch_size:
@@ -417,5 +325,5 @@ if __name__ == "__main__":
     main()
     # Create raw_reviews view if it doesn't exist
     duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-    create_view_if_not_exists(duckdb_conn, "raw_reviews", "s3://raw/reviews/steam_reviews_*.parquet",)
+    create_view_if_not_exists(duckdb_conn, "raw_reviews", "s3://raw/reviews/steam_reviews_*.parquet", )
     duckdb_conn.close()
