@@ -3,7 +3,7 @@ from functools import partial
 
 from airflow.sdk import task, dag
 from airflow.utils.trigger_rule import TriggerRule
-from utils import table_exists
+from utils import table_not_exists
 
 
 default_args = {
@@ -17,13 +17,14 @@ default_args = {
 @dag(dag_id='games_etl_pipeline',
      default_args=default_args,
      start_date=datetime(2025, 8, 10),
+     schedule="0 10 * * WED#1",
      catchup=False)
 def games_etl_pipeline():
     @task.bash(cwd='/opt/airflow/scraping', env={"MINIO_ENDPOINT_URL": "http://minio:9000"})
     def get_all_candidate_ids():
         return "uv run python -m steam_games.get_all_steam_games"
 
-    @task.skip_if(partial(table_exists, "raw_games"))
+    @task.skip_if(partial(table_not_exists, "raw_games"))
     @task.bash(cwd='/opt/airflow/dbt', env={"MINIO_ENDPOINT": "minio:9000"})
     def run_dbt_antijoin():
         return "uv run dbt run --select tag:scraping"
@@ -36,7 +37,7 @@ def games_etl_pipeline():
     def start_game_scraping():
         return "uv run python -m steam_games.game_data"
 
-    @task.skip_if(partial(table_exists, "raw_reviews"))
+    @task.skip_if(partial(table_not_exists, "raw_reviews"))
     @task.bash(cwd='/opt/airflow/dbt', env={"MINIO_ENDPOINT": "minio:9000"})
     def run_dbt_models():
         return "uv run dbt run --exclude tag:scraping"

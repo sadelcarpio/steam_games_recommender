@@ -1,4 +1,4 @@
-def table_exists(table, ctx):
+def table_not_exists(table, ctx):
     import duckdb
     duckdb_conn = duckdb.connect('data/steam.duckdb', read_only=True)
     if table not in duckdb_conn.sql("SHOW TABLES").df().to_dict(orient="records"):

@@ -3,7 +3,7 @@ from functools import partial
 
 from airflow.sdk import task, dag
 
-from utils import table_exists
+from utils import table_not_exists
 
 default_args = {
     'owner': 'etl',
@@ -16,10 +16,11 @@ default_args = {
 @dag(dag_id='reviews_etl_pipeline',
      default_args=default_args,
      start_date=datetime(2025, 8, 10),
+     schedule="0 10 * * SUN",
      catchup=False)
 def reviews_etl_pipeline():
 
-    @task.skip_if(partial(table_exists, "raw_games"))
+    @task.skip_if(partial(table_not_exists, "raw_games"))
     @task.bash(
         cwd='/opt/airflow/scraping',
         env={"FIRESTORE_EMULATOR_HOST": "firestore-emulator:8080", "MINIO_ENDPOINT_URL": "http://minio:9000"}
