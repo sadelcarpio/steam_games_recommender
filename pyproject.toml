@@ -33,7 +33,8 @@ dbt-bigquery = [
 ]
 scraping-duckdb = [
     { include-group = "scraping-base" },
-    { include-group = "duckdb" }
+    { include-group = "duckdb" },
+    "psycopg[binary]>=3.2.9",
 ]
 scraping-bigquery = [
     { include-group = "scraping-base" },

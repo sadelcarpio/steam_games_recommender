@@ -29,6 +29,23 @@ services:
       exit 0;
       "
 
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-ml:/var/lib/postgresql/data
+      - ./initdb.sql:/docker-entrypoint-initdb.d/initdb.sql
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
   firestore-emulator:  # TODO: Replace with MongoDB / Postgres db (to store also serving data)
     build:
       context: .
@@ -63,29 +80,11 @@ services:
     command: >
       bash -c 'pip install psycopg2-binary boto3 && mlflow server \
                        --host 0.0.0.0 \
-                       --backend-store-uri postgresql+psycopg2://airflow:airflow@postgres:5432/mlflow \
+                       --backend-store-uri postgresql+psycopg2://postgres:postgres@postgres:5432/mlflow \
                        --artifacts-destination s3://mlflow/'
 
-  postgres:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
-      - ./initdb.sql:/docker-entrypoint-initdb.d/initdb.sql
-    healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "airflow" ]
-      interval: 10s
-      retries: 5
-      start_period: 5s
-    restart: always
-
 volumes:
-  postgres-db-volume:
+  postgres-ml:
 
 networks:
   default:

@@ -9,10 +9,93 @@ import time
 from datetime import datetime, UTC
 from typing import Dict, List, Optional, Tuple
 import polars as pl
+import psycopg
 from google.cloud import firestore
+from typing import Protocol, runtime_checkable
 
 from utils.steam_api import get_app_reviews
 from utils.views import create_view_if_not_exists
+
+
+@runtime_checkable
+class DbClient(Protocol):  # Interface for database clients
+    def load_latest_timestamps(self) -> dict[str, datetime]: ...
+    def update_latest_timestamps(self, updates: dict[str, datetime]) -> None: ...
+
+
+def make_db_client() -> DbClient:  # Factory method for database clients
+    if True:
+        return PostgresDbClient.from_env()
+    else:
+        return FirestoreDbClient.from_env()
+
+
+class PostgresDbClient(DbClient):
+    def __init__(self, conn: psycopg.Connection, table: str = "games_last_processed_reviews"):
+        self._conn = conn
+        self._table = table
+
+    @classmethod
+    def from_env(cls):
+        host = os.getenv("POSTGRES_HOST", "localhost")
+        pg_user = os.getenv("POSTGRES_USER", "postgres")
+        pg_password = os.getenv("POSTGRES_PASSWORD", "postgres")
+        pg_port = os.getenv("POSTGRES_PORT", "5433")
+        conn_str = os.getenv("POSTGRES_DSN", f"postgresql://{pg_user}:{pg_password}@{host}:{pg_port}/games_scraping")
+        conn = psycopg.connect(conn_str)
+        return cls(conn=conn)
+
+    def update_latest_timestamps(self, updates: dict[str, datetime]) -> None:
+        if not updates:
+            return
+        sql = f"""
+                    INSERT INTO {self._table} (game_id, last_processed_timestamp)
+                    VALUES (%s, %s)
+                    ON CONFLICT (game_id)
+                    DO UPDATE SET last_processed_timestamp = EXCLUDED.last_processed_timestamp
+                """
+        rows = [(k, v) for k, v in updates.items()]
+        with self._conn.cursor() as cur:
+            cur.executemany(sql, rows)
+        self._conn.commit()
+
+    def load_latest_timestamps(self) -> dict[str, datetime]:
+        sql = f"SELECT game_id, last_processed_timestamp FROM {self._table}"
+        out: Dict[str, datetime] = {}
+        with self._conn.cursor() as cur:
+            cur.execute(sql)
+            for game_id, ts in cur.fetchall():
+                if ts is not None:
+                    out[str(game_id)] = ts.replace(tzinfo=UTC)
+        return out
+
+
+class FirestoreDbClient(DbClient):
+    def __init__(self, client: firestore.Client, collection: str = "games"):
+        self._client = client
+        self._collection = client.collection(collection)
+
+    @classmethod
+    def from_env(cls):
+        project = os.getenv("FIRESTORE_PROJECT", "steam-games-recommender")
+        client = firestore.Client(project)
+        return cls(client=client)
+
+    def update_latest_timestamps(self, updates: dict[str, datetime]) -> None:
+        batch = self._client.batch()  # changes
+        for appid, timestamp in updates.items():
+            doc_ref = self._collection.document(appid)
+            batch.set(doc_ref, {"latest_timestamp": timestamp}, merge=True)
+        batch.commit()
+
+    def load_latest_timestamps(self) -> dict[str, datetime]:
+        out: dict[str, datetime] = {}
+        for doc in self._collection.stream():
+            data = doc.to_dict() or {}
+            ts = data.get("latest_timestamp")
+            if ts:
+                out[doc.id] = ts
+        return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,8 +106,8 @@ class App:
     @classmethod
     def from_dict(cls, data: dict) -> "App":
         return cls(
-            app_id=str(data["appid"]),
-            name=data.get("name")
+            app_id=str(data["game_id"]),
+            name=data.get("game_name")
         )
 
     def __str__(self):
@@ -33,11 +116,11 @@ class App:
     def __repr__(self):
         return f"App(app_id={self.app_id}, name={self.name})"
 
+
 class ReviewProcessor:
-    def __init__(self, db_client: firestore.Client, batch_size: int = 100_000):
+    def __init__(self, db_client: DbClient, batch_size: int = 100_000):
         self.logger = logging.getLogger(__name__ + ".ReviewProcessor")
         self.db = db_client
-        self.collection_ref = db_client.collection("games")
         self.batch_size = batch_size
         self.schema = {
             "rec_id": pl.Int64,
@@ -71,14 +154,9 @@ class ReviewProcessor:
 
     def load_latest_timestamps_cache(self) -> None:
         """Load all timestamps in a single batch operation"""
-        self.logger.info("Loading latest timestamps cache from Firestore...")
-        docs = self.collection_ref.stream()
-        for doc in docs:
-            data = doc.to_dict()
-            game_id = doc.id
-            latest_ts = data.get("latest_timestamp")
-            if latest_ts:
-                self._timestamp_cache[game_id] = latest_ts
+        #
+        self.logger.info("Loading latest timestamps cache from db...")
+        self._timestamp_cache = self.db.load_latest_timestamps()
         self.logger.info(f"Loaded {len(self._timestamp_cache)} timestamps from cache")
 
     def get_latest_timestamp(self, appid: str) -> Optional[datetime]:
@@ -96,13 +174,9 @@ class ReviewProcessor:
             return
 
         self.logger.info(f"Flushing {len(self._timestamp_updates)} timestamp updates to Firestore...")
-        batch = self.db.batch()
 
-        for appid, timestamp in self._timestamp_updates.items():
-            doc_ref = self.collection_ref.document(appid)
-            batch.set(doc_ref, {"latest_timestamp": timestamp}, merge=True)
+        self.db.update_latest_timestamps(self._timestamp_updates)
 
-        batch.commit()
         self._timestamp_updates.clear()
         self.logger.info("Timestamp updates flushed successfully")
 
@@ -142,7 +216,6 @@ class ReviewProcessor:
         Returns (reviews_list, has_new_reviews)
         """
         appid = app.app_id
-        app_name = app.name
         cached_timestamp = self.get_latest_timestamp(appid)
         user_reviews = []
 
@@ -260,7 +333,7 @@ def main():
 
     scrape_date = datetime.now(UTC).date()
     os.environ["FIRESTORE_EMULATOR_HOST"] = os.environ.get("FIRESTORE_EMULATOR_HOST", "localhost:8080")
-    db = firestore.Client(project="steam-games-recommender")
+    db = make_db_client()
     processor = ReviewProcessor(db, batch_size=100_000)
     processor.load_latest_timestamps_cache()  # Single read operation
 
@@ -306,7 +379,7 @@ def main():
                                                        "aws_region": "us-east-1",
                                                        "aws_endpoint_url": os.environ.get("MINIO_ENDPOINT_URL",
                                                                                           "http://localhost:9000")})
-                processor.flush_timestamp_updates()  # Batch Firestore updates
+                processor.flush_timestamp_updates()
 
                 # Reset for next batch
                 reviews = pl.DataFrame(infer_schema_length=None, schema=processor.schema)
