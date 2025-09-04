@@ -10,3 +10,6 @@ This project serves as an end to end recommender system for Steam Games, with th
 
 ## Local Setup (Docker Compose) Architecture
 ![steam-games-rec.png](docs/imgs/steam-games-rec-local.png)
+
+## Cloud Setup (GCP) Architecture
+![steam-games-rec.png](docs/imgs/steam-games-rec-gcp.png)
