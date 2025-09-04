@@ -46,24 +46,6 @@ services:
       start_period: 5s
     restart: always
 
-  firestore-emulator:  # TODO: Replace with MongoDB / Postgres db (to store also serving data)
-    build:
-      context: .
-      dockerfile: Dockerfile.firestore
-    container_name: firestore-emulator
-    ports:
-      - "9150:9150"
-      - "8080:8080"
-      - "8081:8081"
-    volumes:
-      - ../../data:/data
-      - ../../scraping/firebase.json:/workspace/firebase.json
-      - ../../scraping/firestore.rules:/workspace/firestore.rules
-      - ../../scraping/.firebaserc:/workspace/.firebaserc
-    stop_signal: SIGINT
-    stop_grace_period: 60s  # give time to export before shutting down container
-    init: true
-
   mlflow:
     image: ghcr.io/mlflow/mlflow:v3.3.2
     ports:

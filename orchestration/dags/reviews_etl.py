@@ -23,7 +23,13 @@ def reviews_etl_pipeline():
     @task.skip_if(partial(table_not_exists, "raw_games"))
     @task.bash(
         cwd='/opt/airflow/scraping',
-        env={"FIRESTORE_EMULATOR_HOST": "firestore-emulator:8080", "MINIO_ENDPOINT_URL": "http://minio:9000"}
+        env={
+            "MINIO_ENDPOINT_URL": "http://minio:9000",
+            "POSTGRES_HOST": "postgres",
+            "POSTGRES_USER": "postgres",
+            "POSTGRES_PASSWORD": "postgres",
+            "POSTGRES_PORT": "5432"
+        }
     )
     def start_reviews_scraping():
         return "uv run python -m steam_reviews.steam_reviews"
