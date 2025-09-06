@@ -5,5 +5,14 @@ sources:
     schema: main
     tables:
       - name: raw_reviews
+        config:
+          external_location: "s3://raw/reviews/steam_reviews_*.parquet"
+          format: parquet
       - name: raw_games
+        config:
+          external_location: "s3://raw/games/steam_games_*.parquet"
+          format: parquet
       - name: app_ids
+        config:
+          external_location: "s3://raw/games/steam_ids.parquet"
+          format: parquet
