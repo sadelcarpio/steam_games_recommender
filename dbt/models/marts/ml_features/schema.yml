@@ -1,21 +1,21 @@
 version: 2
 
 models:
-  - name: daily_game_metrics
+  - name: monthly_game_metrics
     description: Games data with rolling scores calculated on a day to day basis
     columns:
       - name: game_id
         description: Unique ID assigned to each game in Steam.
-      - name: game_review_day
+      - name: game_review_month
         description: Cutoff day for score computation
       - name: game_num_reviews
-        description: Number of reviews up to `game_review_day`
+        description: Number of reviews up to `game_review_month`
       - name: game_num_positive_reviews
-        description: Number of positive reviews up to `game_review_day`
+        description: Number of positive reviews up to `game_review_month`
       - name: game_num_negative_reviews
-        description: Number of negative reviews up to `game_review_day`
+        description: Number of negative reviews up to `game_review_month`
       - name: game_weighted_score
-        description: Weighted score of the game calculated up to `game_review_day`
+        description: Weighted score of the game calculated up to `game_review_month`
 
   - name: game_features
     description: Complete set of time-dependent and fixed features for Steam games
