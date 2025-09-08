@@ -4,8 +4,6 @@ models:
   - name: dim_games
     description: Source of truth for games data, with imputed values on the release date for consistency with review dates.
     columns:
-      - name: game_index
-        description: Incremental index assigned to each game in order of appearance (see `game_prerelease_date`)
       - name: game_id
         description: Unique ID assigned to each game in Steam.
       - name: game_is_free
@@ -62,8 +60,6 @@ models:
     columns:
       - name: user_id
         description: Anonymized user id of the reviewer
-      - name: user_index
-        description: Incremental index assigned to each user in order of appearance (see `first_review_timestamp`)
       - name: first_review_timestamp
         description: Steam Game id.
         tests:

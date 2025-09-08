@@ -31,6 +31,6 @@ WITH first_review AS (SELECT game_id,
                        FROM {{ ref('int_deduplicated_games') }} g
                                 LEFT JOIN first_review
                                           USING (game_id))
-SELECT ROW_NUMBER() OVER (ORDER BY game_prerelease_date NULLS LAST, game_id) - 1 AS game_index, *
+SELECT *
 FROM games_imputed
 WHERE game_release_date IS NOT NULL

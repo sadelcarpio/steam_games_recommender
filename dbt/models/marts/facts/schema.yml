@@ -9,20 +9,20 @@ models:
         tests:
           - not_null
           - unique
-      - name: user_index
-        description: Incremental index assigned to each user in order of appearance
+      - name: user_id
+        description: Anonymized user id of the reviewer
         tests:
           - not_null
           - relationships:
               to: ref('dim_users')
-              field: user_index
-      - name: game_index
-        description: Incremental index assigned to each game in order of appearance
+              field: user_id
+      - name: game_id
+        description: Unique ID assigned to each game in Steam.
         tests:
           - not_null
           - relationships:
               to: ref('dim_games')
-              field: game_index
+              field: game_id
       - name: review
         description: Review text
       - name: written_during_early_access
