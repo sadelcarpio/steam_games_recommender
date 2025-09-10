@@ -15,5 +15,8 @@ SELECT g.*,
        gm.game_num_reviews,
        gm.game_num_positive_reviews,
        gm.game_num_negative_reviews,
+       gm.game_cum_num_reviews,
+       gm.game_cum_num_positive_reviews,
+       gm.game_cum_num_negative_reviews,
        gm.game_weighted_score
 FROM game_metrics gm JOIN {{ ref('dim_games') }} g using (game_id)

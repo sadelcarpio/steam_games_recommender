@@ -23,8 +23,10 @@ services:
         sleep 2;
         mc alias set localminio http://minio:9000 minioadmin minioadmin;
         mc mb localminio/raw;
+        mc mb localminio/clean;
         mc mb localminio/mlflow;
         mc anonymous set public localminio/raw;
+        mc anonymous set public localminio/clean;
         mc anonymous set public localminio/mlflow;
       exit 0;
       "
