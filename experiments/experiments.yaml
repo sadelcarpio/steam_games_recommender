@@ -1,0 +1,22 @@
+tracking_uri: http://localhost:5000
+default_env_manager: local
+
+experiments:
+  - name: pop-baseline
+    project_uri: ./pop_model_baseline
+    entry_point: train
+    experiment_name: recsys/pop-baseline
+    parameters:
+      games_data: ../data/steam.duckdb  # relative to experiments dir. Resolves in mlflow.run
+    tags:
+      model_family: popularity
+      dataset: v1
+  - name: random-baseline
+    project_uri: ./random_baseline
+    entry_point: train
+    experiment_name: recsys/random-baseline
+    parameters:
+      games_data: ../data/steam.duckdb
+    tags:
+      model_family: random
+      dataset: v1

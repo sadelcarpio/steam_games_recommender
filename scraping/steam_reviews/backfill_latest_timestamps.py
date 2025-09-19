@@ -21,7 +21,7 @@ if __name__ == "__main__":
                         SET s3_secret_access_key='';""")
     latest_timestamps_df = duckdb_conn.sql("SELECT game_id, MAX(timestamp_created) AS "
                                            "latest_timestamp FROM stg_reviews GROUP BY game_id").pl()
-    latest_timestamps_dict = {elem["game_id"]: elem["latest_timestamp"] for elem in latest_timestamps_df.to_dicts()}
+    latest_timestamps_dict = {str(elem["game_id"]): elem["latest_timestamp"] for elem in latest_timestamps_df.to_dicts()}
     db_client = make_db_client()
     db_client.update_latest_timestamps(latest_timestamps_dict)
     logging.info("Backfill completed successfully.")

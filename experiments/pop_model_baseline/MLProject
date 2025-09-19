@@ -1,0 +1,7 @@
+name: Popularity Per Month Baseline
+
+entry_points:
+  train:
+    parameters:
+      games_data: { type: path, default: ../../data/steam.duckdb}
+    command: "python train.py --games_data {games_data}"
