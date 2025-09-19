@@ -19,6 +19,5 @@ if __name__ == "__main__":
                                       "aws_endpoint_url": os.environ.get("MINIO_ENDPOINT_URL", "http://localhost:9000")})
     logging.info(f"Wrote {len(df)} rows to s3://raw/games/steam_ids.parquet")
     # Create app_ids view if it doesn't exist
-    duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-    create_view_if_not_exists(duckdb_conn, "app_ids", "s3://raw/games/steam_ids.parquet")
-    duckdb_conn.close()
+    with duckdb.connect('../data/steam.duckdb', read_only=False) as duckdb_conn:
+        create_view_if_not_exists(duckdb_conn, "app_ids", "s3://raw/games/steam_ids.parquet")

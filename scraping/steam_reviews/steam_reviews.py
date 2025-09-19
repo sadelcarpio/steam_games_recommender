@@ -250,15 +250,14 @@ def main():
     processor = ReviewProcessor(db, batch_size=100_000)
     processor.load_latest_timestamps_cache()  # Single read operation
 
-    duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
-    duckdb_conn.sql(f"""SET s3_region='us-east-1';
-                    SET s3_url_style='path';
-                    SET s3_use_ssl=false;
-                    SET s3_endpoint='{os.environ.get("MINIO_ENDPOINT_URL", "localhost:9000")}';
-                    SET s3_access_key_id='';
-                    SET s3_secret_access_key='';""")
-    recommended_games = duckdb_conn.sql("SELECT game_id, game_name FROM stg_games").pl()
-    duckdb_conn.close()
+    with duckdb.connect('../data/steam.duckdb', read_only=True) as duckdb_conn:
+        duckdb_conn.sql(f"""SET s3_region='us-east-1';
+                        SET s3_url_style='path';
+                        SET s3_use_ssl=false;
+                        SET s3_endpoint='{os.environ.get("MINIO_ENDPOINT_URL", "localhost:9000")}';
+                        SET s3_access_key_id='';
+                        SET s3_secret_access_key='';""")
+        recommended_games = duckdb_conn.sql("SELECT game_id, game_name FROM stg_games").pl()
     reviews = pl.DataFrame(infer_schema_length=None, schema=processor.schema)
 
     batch_num = 0
@@ -324,6 +323,5 @@ def main():
 if __name__ == "__main__":
     main()
     # Create raw_reviews view if it doesn't exist
-    duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-    create_view_if_not_exists(duckdb_conn, "raw_reviews", "s3://raw/reviews/steam_reviews_*.parquet", )
-    duckdb_conn.close()
+    with duckdb.connect('../data/steam.duckdb', read_only=False) as duckdb_conn:
+        create_view_if_not_exists(duckdb_conn, "raw_reviews", "s3://raw/reviews/steam_reviews_*.parquet")

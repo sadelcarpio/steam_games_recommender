@@ -48,7 +48,6 @@ def create_apps_features_df() -> pl.DataFrame:
 
 
 if __name__ == "__main__":
-    duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=True)
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
@@ -57,14 +56,14 @@ if __name__ == "__main__":
     batch_size = 10_000
     processed_count = 0
     batch_num = 0
-    try:
-        df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
-    except duckdb.CatalogException:
-        # First run. Download all existing appids data
-        logging.warning("`new_ids_to_scrape` table not found. Downloading all existing appids data.")
-        df = download_all_steam_games()
+    with duckdb.connect('../data/steam.duckdb', read_only=True) as duckdb_conn:
+        try:
+            df = duckdb_conn.sql("SELECT appid FROM new_ids_to_scrape").pl()
+        except duckdb.CatalogException:
+            # First run. Download all existing appids data
+            logging.warning("`new_ids_to_scrape` table not found. Downloading all existing appids data.")
+            df = download_all_steam_games()
     total_apps = len(df)
-    duckdb_conn.close()
     apps_features_df = create_apps_features_df()
     try:
         for i, row in enumerate(df.iter_rows()):
@@ -180,6 +179,5 @@ if __name__ == "__main__":
                                                             "aws_endpoint_url": os.environ.get("MINIO_ENDPOINT_URL",
                                                                                                "http://localhost:9000")})
         # Create raw_games view if it doesn't exist
-        duckdb_conn = duckdb.connect('../data/steam.duckdb', read_only=False)
-        create_view_if_not_exists(duckdb_conn, "raw_games", "s3://raw/games/steam_games_*.parquet")
-        duckdb_conn.close()
+        with duckdb.connect('../data/steam.duckdb', read_only=False) as duckdb_conn:
+            create_view_if_not_exists(duckdb_conn, "raw_games", "s3://raw/games/steam_games_*.parquet")
