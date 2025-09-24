@@ -4,10 +4,10 @@ default_env_manager: local
 experiments:
   - name: pop-baseline
     project_uri: ./pop_model_baseline
-    entry_point: eval
+    entry_point: train
     experiment_name: steam-recsys
     parameters:
-      eval_data: ../data/steam.duckdb  # relative to experiments dir. Resolves in mlflow.run
+      games_data: ../data/steam.duckdb  # relative to experiments dir. Resolves in mlflow.run
     tags:
       model_family: popularity
       dataset: v1

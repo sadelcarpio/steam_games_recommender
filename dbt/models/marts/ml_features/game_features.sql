@@ -11,9 +11,9 @@
 {% endif %}
 WITH game_metrics AS (SELECT *
                       FROM {{ ref('monthly_game_metrics') }}
-                      WHERE game_review_month = '{{ current_month }}')
+                      WHERE game_review_month = DATE '{{ current_month }}')
 SELECT g.*,
-       gm.game_review_month,
+       CAST(gm.game_review_month AS DATE)  AS game_review_month,
        gm.game_num_reviews,
        gm.game_num_positive_reviews,
        gm.game_num_negative_reviews,

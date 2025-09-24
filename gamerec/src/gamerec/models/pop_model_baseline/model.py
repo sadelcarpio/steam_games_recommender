@@ -1,6 +1,7 @@
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 from typing import Any
 
+import pandas as pd
 import polars as pl
 from mlflow.pyfunc import PythonModel
 
@@ -25,8 +26,16 @@ class PopularityPyFunc(PythonModel):
 
     @staticmethod
     def _month_start_prev(dt: datetime):
-        return (dt.replace(day=1) - timedelta(days=1)).replace(day=1)
+        prev = (dt.replace(day=1) - timedelta(days=1)).replace(day=1)
+        if isinstance(dt, datetime):
+            return prev.date()
+        elif isinstance(dt, date):
+            return prev
+        else:
+            raise ValueError(f"Unsupported datetime type: {type(dt)}")
 
     def predict(self, context, model_input, params: dict[str, Any] | None = None):
         # assumes model_input["current_month"] is datetime-like
+        if isinstance(model_input, pd.DataFrame):
+            model_input = pl.from_pandas(model_input)
         return model_input["current_month"].map_elements(lambda dt: self._month_to_recs.get(self._month_start_prev(dt), []))
