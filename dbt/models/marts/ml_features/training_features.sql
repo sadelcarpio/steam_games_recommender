@@ -2,8 +2,7 @@
 {{ config(
     materialized='external',
     format='parquet',
-    options={"partition_by": "current_month", "overwrite_or_ignore": true},
-    tags=['training']
+    options={"partition_by": "current_month", "overwrite_or_ignore": true}
 ) }}
 {% set current_month = var('current_month', none) %}
 {% if current_month is none %}

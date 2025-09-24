@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta
 
 from airflow.sdk import dag, task
 

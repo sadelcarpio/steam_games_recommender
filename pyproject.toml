@@ -58,7 +58,7 @@ notebooks = [
     "jupyter>=1.1.1",
     "langchain>=0.3.27",
     "matplotlib>=3.9.2",
-    "mlflow>=3.3.2",
+    "mlflow @ git+https://github.com/mlflow/mlflow@master",
     "notebook>=7.0.7",
     "polars[pyarrow]>=1.30.0",
     "pyarrow>=20.0.0",

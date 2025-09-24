@@ -5,3 +5,7 @@ entry_points:
     parameters:
       games_data: { type: path, default: ../../data/steam.duckdb}
     command: "python train.py --games_data {games_data}"
+  eval:
+    parameters:
+      eval_data: { type: path, default: ../../data/steam.duckdb }
+    command: "python eval.py --eval_data {eval_data}"
