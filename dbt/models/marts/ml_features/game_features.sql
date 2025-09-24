@@ -2,7 +2,8 @@
 {{ config(
     materialized='external',
     format='parquet',
-    options={"partition_by": "game_review_month", "overwrite_or_ignore": true}
+    options={"partition_by": "game_review_month", "overwrite_or_ignore": true},
+    tags=['training']
 ) }}
 {% set current_month = var('current_month', none) %}
 {% if current_month is none %}

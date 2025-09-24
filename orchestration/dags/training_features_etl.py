@@ -16,7 +16,7 @@ default_args = {
      schedule="@monthly",
      max_active_runs=1,
      catchup=True)
-def reviews_etl_pipeline():
+def training_features_etl_pipeline():
 
     @task.bash(cwd='/opt/airflow/dbt', env={
         "HOME": "/opt/airflow",
@@ -28,4 +28,4 @@ def reviews_etl_pipeline():
     run_dbt_models()
 
 
-dag_instance = reviews_etl_pipeline()
+dag_instance = training_features_etl_pipeline()

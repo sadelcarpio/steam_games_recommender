@@ -11,71 +11,49 @@
 {% set prev_exists = (load_relation(this) is not none) %}
 {% set prev_month_expr = "DATE_TRUNC('month', DATE '" ~ current_month ~ "' - INTERVAL 1 MONTH)" %}
 
--- 1) Identify new first-time interactions for the current month only
-WITH user_game_firsts AS (SELECT tf.user_id,
-                                 tf.game_id,
-                                 MIN(DATE_TRUNC('month', tf.timestamp_created)) AS first_month
-                          FROM {{ ref('fact_reviews') }} AS tf
-                          WHERE tf.voted_up = true
-                          GROUP BY tf.user_id, tf.game_id),
-     new_firsts AS (SELECT f.user_id,
-                           f.game_id
-                    FROM user_game_firsts f
-                    WHERE f.first_month = DATE '{{ current_month }}'),
-    {% if prev_exists %}
--- 2a) Previous month’s cumulative arrays
-     prev AS (SELECT user_id,
-                     past_game_ids,
-                     all_game_ids
-              FROM {{ this }}
-              WHERE current_month = {{ prev_month_expr }}),
-
--- 3a) Build this month’s cumulative arrays by appending only new_firsts
-     this_month AS (SELECT COALESCE(p.user_id, n.user_id) AS user_id,
-                           DATE '{{ current_month }}'     AS current_month,
-                           -- Append this month's new_firsts to last month's past
-                           COALESCE(
-                                   array_concat(
-                                           COALESCE(p.past_game_ids, []::INT[]),
-                                           array_agg(n.game_id ORDER BY n.game_id)
-                                   ),
-                                   COALESCE(p.past_game_ids, []::INT[])
-                           )                              AS past_game_ids,
-                           -- Maintain a per-user cumulative "all_game_ids" (union-like, via concat + distinct)
-                           array_distinct(
-                                   COALESCE(
-                                           array_concat(
-                                                   COALESCE(p.all_game_ids, []::INT[]),
-                                                   array_agg(n.game_id ORDER BY n.game_id)
-                                           ),
-                                           COALESCE(p.all_game_ids, []::INT[])
-                                   )
-                           )                              AS all_game_ids
-                    FROM prev p
-                             FULL OUTER JOIN new_firsts n
-                                             ON n.user_id = p.user_id
-                    GROUP BY COALESCE(p.user_id, n.user_id), DATE '{{ current_month }}', p.past_game_ids,
-                             p.all_game_ids)
-
-SELECT t.user_id,
-       t.current_month,
-       t.past_game_ids,
-       t.all_game_ids,
-       array_filter(t.all_game_ids, x - > not array_has(t.past_game_ids, x)) AS future_game_ids
-FROM this_month t
-    {% else %} this_month AS (
-    SELECT
-    n.user_id,
-    DATE '{{ current_month }}' AS current_month,
-    []::INT[]                 AS past_game_ids,
-    array_distinct(array_agg(n.game_id ORDER BY n.game_id)) AS all_game_ids
-    FROM new_firsts n
-    GROUP BY n.user_id, DATE '{{ current_month }}'
+WITH user_game AS (
+    SELECT user_id,
+           game_id,
+           DATE_TRUNC('month', timestamp_created) AS current_month,
+           array_agg(game_id) OVER (PARTITION BY user_id) AS all_game_ids
+    FROM {{ ref('fact_reviews') }}
+    WHERE voted_up = true
+),
+new_interactions AS (
+    SELECT user_id,
+           array_agg(game_id) AS monthly_game_ids,
+           current_month,
+           all_game_ids,
+    FROM user_game
+    WHERE current_month = '{{ current_month }}'
+    GROUP BY user_id, current_month, all_game_ids
 )
-SELECT t.user_id,
-       t.current_month,
-       t.past_game_ids,
-       t.all_game_ids,
-       array_filter(t.all_game_ids, x - > not array_has(t.past_game_ids, x)) AS future_game_ids
-FROM this_month t
+{% if prev_exists %}
+, previous_interactions AS (
+    SELECT * FROM {{ this }} WHERE current_month = {{ prev_month_expr }}
+),
+merged_interactions AS (
+    SELECT COALESCE(pi.user_id, ni.user_id) AS user_id,
+           '{{ current_month }}' AS current_month,
+           ni.monthly_game_ids AS monthly_game_ids,
+           CASE
+               WHEN pi.user_id IS NULL THEN []::INT[]
+               ELSE pi.monthly_game_ids END AS past_game_ids,
+           COALESCE(pi.all_game_ids, ni.all_game_ids) AS all_game_ids,
+    FROM new_interactions ni
+    LEFT JOIN previous_interactions pi
+    ON pi.user_id = ni.user_id
+),
+    final AS (
+        SELECT *, array_filter(all_game_ids, x -> x NOT IN past_game_ids) AS future_game_ids
+        FROM merged_interactions
+    )
+SELECT * FROM final
+{% else %}
+SELECT user_id,
+       current_month,
+       monthly_game_ids,
+       all_game_ids,
+       all_game_ids AS future_game_ids,
+    FROM new_interactions
 {% endif %}
