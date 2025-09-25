@@ -29,12 +29,16 @@ features AS (
         COALESCE(gm.game_cum_num_reviews, 0) AS game_cum_num_reviews,
         COALESCE(gm.game_cum_num_positive_reviews, 0) AS game_cum_num_positive_reviews,
         COALESCE(gm.game_cum_num_negative_reviews, 0) AS game_cum_num_negative_reviews,
-        gm.game_weighted_score
+        gm.game_weighted_score,
+        uf.past_game_ids
     FROM source_rows s
     ASOF LEFT JOIN {{ ref('monthly_game_metrics') }} gm
     ON s.game_id = gm.game_id
     AND gm.game_review_month <= s.prev_month
     LEFT JOIN {{ ref('dim_games') }} dg
     ON s.game_id = dg.game_id
+    ASOF LEFT JOIN {{ ref('user_features') }} uf
+    ON s.user_id = uf.user_id
+    AND gm.game_review_month <= uf.current_month
 )
 SELECT * FROM features

@@ -51,9 +51,10 @@ merged_interactions AS (
 SELECT * FROM final
 {% else %}
 SELECT user_id,
-       current_month,
        monthly_game_ids,
+       []::INT[] AS past_game_ids,
        all_game_ids,
        all_game_ids AS future_game_ids,
+       current_month
     FROM new_interactions
 {% endif %}
