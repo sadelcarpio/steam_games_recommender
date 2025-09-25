@@ -1,72 +1,14 @@
 from datetime import datetime
-from typing import Protocol, runtime_checkable, Literal
+from typing import Protocol, runtime_checkable, Literal, Callable
 
 import duckdb
 import polars as pl
-import torch
-
-
-@runtime_checkable
-class Tabular(Protocol):
-    def to_polars(self) -> pl.DataFrame: ...
-
-
-class DuckDbRelationAdapter(Tabular):
-    def __init__(self, rel: "duckdb.DuckDBPyRelation"):
-        self._rel = rel
-
-    def to_polars(self) -> pl.DataFrame:
-        return pl.from_arrow(self._rel.arrow())
-
-
-class ReviewsDatasetFactory(Protocol):
-    def from_tabular(self, t: Tabular) -> "ReviewsDataset": ...
-
-
-class PolarsDfDatasetFactory(ReviewsDatasetFactory):
-    def from_tabular(self, t: Tabular) -> "ReviewsDataset":
-        return DataFrameReviewsDataset(t.to_polars())
-
-
-class TorchDatasetFactory(ReviewsDatasetFactory):
-    def from_tabular(self, t: Tabular) -> "ReviewsDataset":
-        return TorchReviewsDataset(t.to_polars())
-
-
-@runtime_checkable
-class ReviewsDataset(Protocol):
-    def split_data(self, cutoff: str) -> tuple["ReviewsDataset", "ReviewsDataset"]: ...
-
-
-class TorchReviewsDataset(torch.utils.data.Dataset):
-    def __init__(self, df: pl.DataFrame):
-        self.df = df
-
-    def split_data(self, cutoff: str) -> tuple["TorchReviewsDataset", "TorchReviewsDataset"]:
-        pass
-
-    def __len__(self):
-        return len(self.df)
-
-    def __getitem__(self, idx):
-        return self.df.row(idx)
-
-
-class DataFrameReviewsDataset(ReviewsDataset):
-    def __init__(self, df: pl.DataFrame):
-        self.df = df
-    def split_data(self, cutoff: str) -> tuple["DataFrameReviewsDataset", "DataFrameReviewsDataset"]:
-        return (
-            DataFrameReviewsDataset(self.df.filter(pl.col("game_review_month") < cutoff)),
-            DataFrameReviewsDataset(self.df.filter(pl.col("game_review_month") >= cutoff))
-        )
-
 
 @runtime_checkable
 class OlapDb(Protocol):
-    def load_game_features(self, cutoff: str) -> Tabular: ...
-    def load_user_features(self, cutoff: str) -> Tabular: ...
-    def load_reviews_data(self, cutoff: str) -> Tabular: ...
+    def load_game_features(self, cutoff: str) -> pl.DataFrame: ...
+    def load_user_features(self, cutoff: str) -> pl.DataFrame: ...
+    def load_reviews_data(self, cutoff: str) -> pl.DataFrame: ...
 
 
 class DuckDb(OlapDb):
@@ -75,39 +17,61 @@ class DuckDb(OlapDb):
 
     def _validate_cutoff(self, cutoff: str) -> None:
         try:
-            datetime.strptime(cutoff, "%Y-%m")
+            datetime.strptime(cutoff, "%Y-%m-%d")
         except ValueError:
             raise ValueError(f"Invalid cutoff date: {cutoff}")
 
-    def load_game_features(self, cutoff: str) -> Tabular:
+    def load_game_features(self, cutoff: str) -> pl.DataFrame:
         self._validate_cutoff(cutoff)
         with duckdb.connect(self._conn) as duckdb_conn:
-            rel = duckdb_conn.sql(f"SELECT * FROM game_features WHERE current_month <= '{cutoff}'")
-        return DuckDbRelationAdapter(rel)
+            duckdb_conn.sql(f"""SET s3_region='us-east-1';
+                                    SET s3_url_style='path';
+                                    SET s3_use_ssl=false;
+                                    SET s3_endpoint='localhost:9000';
+                                    SET s3_access_key_id='';
+                                    SET s3_secret_access_key='';""")
+            rel = duckdb_conn.sql(f"SELECT * EXCLUDE (game_review_month), game_review_month AS current_month FROM game_features WHERE game_review_month <= '{cutoff}'").pl()
+        return rel
 
-    def load_user_features(self, cutoff: str) -> Tabular:
+    def load_user_features(self, cutoff: str) -> pl.DataFrame:
         self._validate_cutoff(cutoff)
         with duckdb.connect(self._conn) as duckdb_conn:
-            rel = duckdb_conn.sql(f"SELECT * FROM user_features WHERE current_month <= '{cutoff}'")
-        return DuckDbRelationAdapter(rel)
+            duckdb_conn.sql(f"""SET s3_region='us-east-1';
+                                                SET s3_url_style='path';
+                                                SET s3_use_ssl=false;
+                                                SET s3_endpoint='localhost:9000';
+                                                SET s3_access_key_id='';
+                                                SET s3_secret_access_key='';""")
+            rel = duckdb_conn.sql(f"SELECT * FROM user_features WHERE current_month <= '{cutoff}'").pl()
+        return rel
 
-    def load_reviews_data(self, cutoff: str) -> Tabular:
+    def load_reviews_data(self, cutoff: str) -> pl.DataFrame:
         self._validate_cutoff(cutoff)
         with duckdb.connect(self._conn) as duckdb_conn:
-            rel = duckdb_conn.sql(f"SELECT * FROM training_features WHERE current_month <= '{cutoff}'")
-        return DuckDbRelationAdapter(rel)
+            duckdb_conn.sql(f"""SET s3_region='us-east-1';
+                                                SET s3_url_style='path';
+                                                SET s3_use_ssl=false;
+                                                SET s3_endpoint='localhost:9000';
+                                                SET s3_access_key_id='';
+                                                SET s3_secret_access_key='';""")
+            rel = duckdb_conn.sql(f"SELECT * FROM training_features WHERE current_month <= '{cutoff}'").pl()
+        return rel
 
 
 class DataLoader:
     def __init__(self, db: OlapDb):
         self.db = db
 
-    def fetch_data(self, cutoff: str, dataset_type: Literal["game", "user", "reviews"]):
+    def fetch_data(self,
+                   cutoff: str,
+                   dataset_type: Literal["game", "user", "reviews"],
+                   data_format: Literal["dataframe", "torch"] = "dataframe") -> pl.DataFrame:
         if dataset_type == "game":
-            return self.db.load_game_features(cutoff)
+            df = self.db.load_game_features(cutoff)
         elif dataset_type == "user":
-            return self.db.load_user_features(cutoff)
+            df = self.db.load_user_features(cutoff)
         elif dataset_type == "reviews":
-            return self.db.load_reviews_data(cutoff)
+            df = self.db.load_reviews_data(cutoff)
         else:
             raise ValueError(f"Invalid dataset type: {dataset_type}")
+        return df
