@@ -30,7 +30,7 @@ class DuckDb(OlapDb):
                                     SET s3_endpoint='localhost:9000';
                                     SET s3_access_key_id='';
                                     SET s3_secret_access_key='';""")
-            rel = duckdb_conn.sql(f"SELECT * EXCLUDE (game_review_month), game_review_month AS current_month FROM game_features WHERE game_review_month <= '{cutoff}'").pl()
+            rel = duckdb_conn.sql(f"SELECT * FROM game_features WHERE game_review_month <= '{cutoff}'").pl()
         return rel
 
     def load_user_features(self, cutoff: str) -> pl.DataFrame:
@@ -62,10 +62,9 @@ class DataLoader:
     def __init__(self, db: OlapDb):
         self.db = db
 
-    def fetch_data(self,
+    def load_data(self,
                    cutoff: str,
-                   dataset_type: Literal["game", "user", "reviews"],
-                   data_format: Literal["dataframe", "torch"] = "dataframe") -> pl.DataFrame:
+                   dataset_type: Literal["game", "user", "reviews"]) -> pl.DataFrame:
         if dataset_type == "game":
             df = self.db.load_game_features(cutoff)
         elif dataset_type == "user":

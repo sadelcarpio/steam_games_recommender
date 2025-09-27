@@ -38,4 +38,7 @@ class PopularityPyFunc(PythonModel):
         # assumes model_input["current_month"] is datetime-like
         if isinstance(model_input, pd.DataFrame):
             model_input = pl.from_pandas(model_input)
-        return model_input["current_month"].map_elements(lambda dt: self._month_to_recs.get(self._month_start_prev(dt), []))
+        output = model_input["current_month"].map_elements(lambda dt: self._month_to_recs.get(self._month_start_prev(dt), []))
+        if isinstance(model_input, pd.DataFrame):
+            return output.to_pandas().map(lambda x: x.tolist())
+        return output

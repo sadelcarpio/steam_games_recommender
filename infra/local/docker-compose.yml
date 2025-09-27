@@ -32,7 +32,7 @@ services:
       "
 
   postgres:
-    image: postgres:13
+    image: pgvector/pgvector:pg13
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

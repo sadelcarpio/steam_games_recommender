@@ -3,9 +3,10 @@ name: Popularity Per Month Baseline
 entry_points:
   main:
     parameters:
-      games_data: { type: path, default: ../../data/steam.duckdb}
-    command: "python train.py --games_data {games_data}"
-  eval:
-    parameters:
-      eval_data: { type: path, default: ../../data/steam.duckdb }
-    command: "python eval.py --eval_data {eval_data}"
+      duckdb_path: { type: path, default: ../../data/steam.duckdb }
+      cutoff: { type: str, default: "2020-01-01" }
+      split_cutoff: { type: str, default: "2017-01-01" }
+      train_size: { type: int, default: 100_000 }
+      test_size: { type: int, default: 10_000 }
+      k: { type: int, default: 10 }
+    command: "python main.py --duckdb_path {duckdb_path} --cutoff {cutoff} --split_cutoff {split_cutoff} --train_size {train_size} --test_size {test_size} --k {k}"

@@ -1,4 +1,3 @@
-"""
-Utilities for loading data into a Machine Learning algorithm
-Built all around Pytorch's Datasets
-"""
+from gamerec.data.loader import DataLoader, DuckDb
+
+__all__ = ["DataLoader", "DuckDb"]

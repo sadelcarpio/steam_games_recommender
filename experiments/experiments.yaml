@@ -1,13 +1,15 @@
 tracking_uri: http://localhost:5000
 default_env_manager: local
+exp_name: steam-recsys
 
 experiments:
-  - name: pop-baseline
+  - name: pop-model-baseline
     project_uri: ./pop_model_baseline
-    entry_point: train
-    experiment_name: steam-recsys
+    entry_point: main
     parameters:
-      games_data: ../data/steam.duckdb  # relative to experiments dir. Resolves in mlflow.run
+      duckdb_path: ../data/steam.duckdb  # relative to experiments dir. Resolves in mlflow.run
     tags:
       model_family: popularity
-      dataset: v1
+
+  - name: tf-idf-content-based
+    project_uri: ./tf_idf_content_based
