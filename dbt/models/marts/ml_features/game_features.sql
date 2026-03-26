@@ -6,9 +6,6 @@
     tags=['training']
 ) }}
 {% set current_month = var('current_month', none) %}
-{% if current_month is none %}
-{% do exceptions.raise("Set --vars 'current_month: YYYY-MM-01' to run month-by-month") %}
-{% endif %}
 WITH game_metrics AS (SELECT *
                       FROM {{ ref('monthly_game_metrics') }}
                       WHERE game_review_month = DATE '{{ current_month }}')

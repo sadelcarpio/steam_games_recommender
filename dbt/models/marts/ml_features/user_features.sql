@@ -5,9 +5,6 @@
     tags=['training']
 ) }}
 {% set current_month = var('current_month', none) %}
-{% if current_month is none %}
-{% do exceptions.raise("Set --vars 'current_month: YYYY-MM-01' to run month-by-month") %}
-{% endif %}
 {% set prev_exists = (load_relation(this) is not none) %}
 {% set prev_month_expr = "DATE_TRUNC('month', DATE '" ~ current_month ~ "' - INTERVAL 1 MONTH)" %}
 

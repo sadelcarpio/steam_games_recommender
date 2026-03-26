@@ -61,7 +61,7 @@ notebooks = [
     "langchain>=0.3.27",
     "langchain-text-splitters>=0.3.11",
     "matplotlib>=3.9.2",
-    "mlflow @ git+https://github.com/mlflow/mlflow@master",
+    "mlflow>=3.4.0",
     "notebook>=7.0.7",
     "openai>=1.109.1",
     "polars[pyarrow]>=1.30.0",
@@ -70,11 +70,25 @@ notebooks = [
     "scikit-learn>=1.7.1",
     "seaborn>=0.13.2",
     "sentence-transformers>=5.1.0",
+    "smolagents>=1.22.0",
     "tiktoken>=0.11.0",
     "torch>=2.7.1",
     "torchmetrics>=1.0.3",
     "torchrec>=1.2.0",
 ]
+genai-app = [
+    "fastapi>=0.117.1",
+    "uvicorn>=0.37.0",
+]
+testing = [
+    { include-group = "orchestration-base" },
+    { include-group = "duckdb" },
+    "pytest>=8.0.0",
+    "pytest-mock>=3.14.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["orchestration/dags"]
 
 [tool.uv.sources]
 gamerec = { workspace = true }

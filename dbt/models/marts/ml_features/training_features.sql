@@ -6,9 +6,6 @@
     tags=['training']
 ) }}
 {% set current_month = var('current_month', none) %}
-{% if current_month is none %}
-    {% do exceptions.raise("Set --vars 'current_month: YYYY-MM-01' to run month-by-month") %}
-{% endif %}
 WITH source_rows AS (
     SELECT
         r.*,
