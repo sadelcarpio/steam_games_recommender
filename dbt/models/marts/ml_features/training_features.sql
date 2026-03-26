@@ -39,6 +39,6 @@ features AS (
     ON s.game_id = dg.game_id
     ASOF LEFT JOIN {{ ref('user_features') }} uf
     ON s.user_id = uf.user_id
-    AND gm.game_review_month <= uf.current_month
+    AND s.prev_month <= uf.current_month
 )
 SELECT * FROM features
